@@ -22,8 +22,9 @@ made by code; there are no art or audio files.
 - `game/main.gd` builds everything and owns the per-frame context (`Game.ctx`: what the player is
   doing, read by `Rules.judge`).
 - `game/core`: autoloads `Clock`, `Game` (run state), `Sfx` (synthesised sounds); `Save`; `Demo`.
-- `game/world`: `Templates` (floor plans as data), `House`, `Portal` (doors, windows), `Street`
-  (map + navmesh), `Build` (box helpers, physics layers).
+- `game/world`: `Templates` (floor plans as data), `House`, `Furnish` (how each piece of furniture
+  is drawn), `Portal` (doors, windows), `Street` (map + navmesh), `Build` (shared meshes and
+  materials, generated detail textures, the faceted foliage shader, physics layers).
 - `game/actors`: `Figure`, `Player`, `Walker` (path following + sight), `Neighbour`, `Dog`.
 - `game/systems`: `Cast` (who lives where, from a seed), `Rules` (pure judgement functions),
   `Missions`, `Law` (inspections, police, investigator, searches), `Life` (needs, days, weather,
@@ -52,6 +53,16 @@ godot --headless --path . --script tools/gen_icon.gd   # regenerate icon.png
 - `Neighbour.visible` means "on the map" (false while away). Use `figure.visible` for drawing.
 - Saves use `var_to_str`, and containers and portals are restored by position in a list, so the
   street must be rebuilt from the same seed before `Save.apply`.
+
+## Look
+- Detailed but low-poly: boxes, cylinders and faceted blobs only, flat colour plus small generated
+  greyscale textures (`Build.texture`) that the material colour tints. No image files.
+- Use `Build.box/cyl/leaf` so meshes and materials are shared; do not create a new material per
+  object. Decorative pieces get no collider, so they cannot change the navmesh.
+- Volumetric fog does not work with the orthographic camera (it blacks the scene out). Lamp cones
+  are additive meshes instead (`Street._shaft`).
+- Ideas the owner has parked, and candidates for next: `docs/ideas.md`. Do not build from that
+  list without being asked.
 
 ## Review gates
 The owner judges look and feel from screenshots or by playing. Do not call a visual or feel change

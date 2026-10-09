@@ -176,6 +176,7 @@ func walk() -> void:
 func scenes() -> void:
 	Clock.running = true
 	await at(7.5, main.street.bus_stop, 20.0)
+	Game.worked_today = false
 	await press("Ride")
 	await shot("1_plant", 1.5)
 	main.shift.finish()

@@ -71,6 +71,8 @@ static func make(house: House, n: Node3D, kind: String, s: Vector3, c: Color, rn
 			Build.box(n, Vector3(w + 0.04, 0.05, d + 0.04), Vector3(0, 0.885, 0), Color("d9d4c7"))
 			Build.box(n, Vector3(0.5, 0.02, 0.36), Vector3(-w * 0.22, 0.915, 0), Color("9aa0a6"))
 			Build.box(n, Vector3(0.03, 0.2, 0.03), Vector3(-w * 0.22, 1.0, -d * 0.5 + 0.1), Color("c8c8cc"))
+			if house.plain:
+				return
 			Build.box(n, Vector3(0.62, 0.9, d), Vector3(w * 0.5 - 0.33, 0.45, 0), Color("e6e2d6"))
 			Build.box(n, Vector3(0.6, 0.02, d - 0.04), Vector3(w * 0.5 - 0.33, 0.915, 0), Color("2c2c30"))
 			for x: float in [-0.14, 0.14]:

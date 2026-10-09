@@ -551,8 +551,8 @@ func _west_end() -> void:
 	Build.solid(nav, Vector3(1.0, 2.4, 1.0), tb + Vector3.UP * 1.2, Build.L_LOW)
 	_park_lamp(Vector3(-28, 0, -8.5))
 	# plant bus shelter
-	Build.box(self, Vector3(4.2, 0.12, 1.8), Vector3(-9, 2.45, 6.6), Color("4d5a66"))
-	Build.box(self, Vector3(4.0, 2.4, 0.08), Vector3(-9, 1.2, 7.35), Color(0.6, 0.75, 0.85, 0.45))
+	Build.box(self, Vector3(4.2, 0.08, 1.8), Vector3(-9, 2.45, 6.6), Color(0.3, 0.36, 0.42, 0.5))   # see-through, so you can find yourself under it
+	Build.box(self, Vector3(4.0, 2.4, 0.08), Vector3(-9, 1.2, 7.35), Color(0.6, 0.75, 0.85, 0.25))
 	for bx: float in [-10.9, -7.1]:
 		Build.box(self, Vector3(0.1, 2.4, 0.1), Vector3(bx, 1.2, 5.9), Color("4d5a66"))
 		Build.box(self, Vector3(0.08, 2.4, 1.4), Vector3(bx, 1.2, 6.65), Color(0.6, 0.75, 0.85, 0.3))
