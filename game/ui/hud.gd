@@ -31,7 +31,13 @@ var _refresh: Callable    # rebuilds the open window when the game state changes
 
 
 func _ready() -> void:
+	layer = 2
 	var root := Control.new()
+	var face := SystemFont.new()
+	face.font_names = PackedStringArray(["American Typewriter", "Courier New", "Courier"])
+	var th := Theme.new()
+	th.default_font = face
+	root.theme = th
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
@@ -181,6 +187,7 @@ func _process(_delta: float) -> void:
 	for n: Neighbour in main.neighbours:
 		worst = maxf(worst, n.notice)
 		alarm = alarm or n.state == "alarm"
+	Sfx.tension = 1.0 if (alarm or main.law.blown or main.law.scramble >= 0.0) else clampf(worst * 1.5, 0.0, 0.8)
 	_eye.text = "SOMEONE IS GOING FOR THE PHONE" if alarm else ("Being watched" if worst > 0.05 else "")
 	_eye.add_theme_color_override("font_color", BAD if alarm else WARN)
 	_mood.text = "Street: %s" % Game.mood()

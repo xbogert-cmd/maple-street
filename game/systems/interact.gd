@@ -124,7 +124,7 @@ func _build() -> Array[Dictionary]:
 		list = here.furn
 	for f in list:
 		var dist: float = (f.pos as Vector3).distance_to(pos)
-		var reach := 1.7 + maxf(f.node.mesh.size.x, f.node.mesh.size.z) * 0.3
+		var reach: float = 1.7 + maxf(f.size.x, f.size.z) * 0.3
 		if dist < reach:
 			for o in _furniture(f, here):
 				found.append([dist, o])

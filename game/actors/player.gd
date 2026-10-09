@@ -28,7 +28,7 @@ func _ready() -> void:
 	add_child(cs)
 	figure = Figure.new()
 	add_child(figure)
-	figure.build({"shirt": "6f7a80", "pants": "33373f", "hair": "3a2a1c", "skin": "e2bd9a"})
+	figure.build({"shirt": "8a8f86", "pants": "33373f", "hair": "3a2a1c", "skin": "e2bd9a", "jacket": true, "id": 4})
 
 
 func _unhandled_key_input(e: InputEvent) -> void:

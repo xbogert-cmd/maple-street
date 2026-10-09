@@ -9,6 +9,12 @@ var _pool: Array[AudioStreamPlayer] = []
 var _next := 0
 var _rain: AudioStreamPlayer
 var _night: AudioStreamPlayer
+var _birds: AudioStreamPlayer
+var _wind: AudioStreamPlayer
+var _pad: AudioStreamPlayer
+var _tense: AudioStreamPlayer
+var tension := 0.0              # 0 calm .. 1 someone is on to you; set by the HUD
+var _tension_now := 0.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -26,6 +32,8 @@ func _ready() -> void:
 		"static": _wav(_static()),
 		"siren": _wav(_siren()),
 		"thud": _wav(_mix(_tone(70.0, 0.25, 0.7, 12.0), _noise(0.1, 0.3, 30.0, 0.2))),
+		"whistle": _wav(_mix(_tone(392.0, 1.6, 0.14, 0.6), _tone(494.0, 1.6, 0.1, 0.6))),
+		"thunder": _wav(_mix(_noise(3.0, 0.7, 1.2, 0.03), _noise(0.4, 0.3, 6.0, 0.15))),
 	}
 	for i in 8:
 		var p := AudioStreamPlayer.new()
@@ -33,6 +41,10 @@ func _ready() -> void:
 		_pool.append(p)
 	_rain = _loop(_noise(1.5, 0.22, 0.0, 0.35))
 	_night = _loop(_crickets())
+	_birds = _loop(_birdsong())
+	_wind = _loop(_windy())
+	_pad = _loop(_chords([110.0, 130.81, 164.81], [98.0, 123.47, 146.83]))
+	_tense = _loop(_chords([55.0, 58.27, 82.41], [55.0, 61.74, 77.78]))
 
 
 func play(sound: String, at: Variant = null, volume_db := 0.0) -> void:
@@ -54,6 +66,11 @@ func play(sound: String, at: Variant = null, volume_db := 0.0) -> void:
 func ambience(rain: float, night: float, indoors: bool) -> void:
 	_fade(_rain, rain, -10.0 - (8.0 if indoors else 0.0))
 	_fade(_night, night * (1.0 - rain) * (0.0 if indoors else 1.0), -20.0)
+	_fade(_birds, (1.0 - night) * (1.0 - rain) * (0.35 if indoors else 1.0), -19.0)
+	_fade(_wind, 0.5 + rain * 0.5, -24.0 - (6.0 if indoors else 0.0))
+	_tension_now = move_toward(_tension_now, tension, 0.01)
+	_fade(_pad, night * (1.0 - _tension_now), -21.0)
+	_fade(_tense, _tension_now, -13.0)
 
 
 func _fade(p: AudioStreamPlayer, amount: float, full_db: float) -> void:
@@ -160,6 +177,54 @@ func _siren() -> PackedFloat32Array:
 		var t := float(i) / RATE
 		ph += TAU * (650.0 + 250.0 * sin(TAU * t / 1.2)) / RATE
 		out[i] = sin(ph) * 0.16 * minf(1.0, (2.4 - t) * 2.0)
+	return out
+
+
+## Sparse two- and three-note chirps over six seconds.
+func _birdsong() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(int(6.0 * RATE))
+	for k in 9:
+		var at := _rng.randf_range(0.1, 5.5)
+		var base := _rng.randf_range(2400.0, 3800.0)
+		for note in _rng.randi_range(2, 4):
+			var start := int((at + note * 0.11) * RATE)
+			var ph := 0.0
+			var n := int(0.07 * RATE)
+			for i in n:
+				if start + i >= out.size():
+					break
+				var t := float(i) / n
+				ph += TAU * (base + 500.0 * sin(t * PI) + note * 180.0) / RATE
+				out[start + i] += sin(ph) * 0.1 * sin(t * PI)
+	return out
+
+
+## Slow breathing hiss.
+func _windy() -> PackedFloat32Array:
+	var out := _noise(8.0, 0.3, 0.0, 0.04)
+	for i in out.size():
+		var t := float(i) / out.size()
+		out[i] *= 0.55 + 0.45 * sin(TAU * t) * sin(TAU * t * 3.0)
+	return out
+
+
+## A slow pad: two chords, eight seconds each, soft detuned sines that loop cleanly.
+func _chords(first: Array, second: Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var half := int(8.0 * RATE)
+	out.resize(half * 2)
+	for c in 2:
+		var notes: Array = first if c == 0 else second
+		for i in half:
+			var t := float(i) / RATE
+			var env := sin(PI * float(i) / half)
+			var v := 0.0
+			for f: float in notes:
+				# whole numbers of cycles in 8 s, so the loop point is silent and click-free
+				var ff := roundf(f * 8.0) / 8.0
+				v += sin(TAU * ff * t) + 0.5 * sin(TAU * ff * 2.0 * t + 0.4) + 0.6 * sin(TAU * (ff + 0.25) * t)
+			out[c * half + i] = v * 0.035 * env * env
 	return out
 
 

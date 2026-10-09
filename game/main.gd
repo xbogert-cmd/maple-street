@@ -52,6 +52,7 @@ func _ready() -> void:
 	for n: Node in [missions, law, life, shift, interact, hud]:
 		n.set("main", self)
 		add_child(n)
+	add_child(Film.new())
 	Game.noise.connect(_on_noise)
 	Clock.hour_changed.connect(_on_hour)
 	if Game.pending_load:
@@ -92,17 +93,42 @@ func _people() -> void:
 			p.locked = h != street.home and (not p.is_window or rng.randf() > 0.3)
 
 
+## Light through the day: [hour, sun colour, sun energy, ambient colour, ambient energy].
+const SKY: Array = [
+	[0.0, "8fa6e8", 0.16, "1b2440", 0.55],
+	[5.4, "8fa6e8", 0.16, "1b2440", 0.55],
+	[6.4, "ffa97a", 0.55, "6a6f8f", 0.6],
+	[8.0, "ffe6c0", 0.95, "a6b2c6", 0.68],
+	[13.0, "fff4e2", 1.05, "b4c2d6", 0.7],
+	[17.5, "ffd9a0", 0.95, "b0b0c0", 0.66],
+	[19.3, "ff8f52", 0.7, "8a7890", 0.58],
+	[20.3, "6a6fb0", 0.26, "343c62", 0.55],
+	[21.0, "8fa6e8", 0.16, "1b2440", 0.55],
+	[24.0, "8fa6e8", 0.16, "1b2440", 0.55],
+]
+
+
 func _lighting() -> void:
 	sun = DirectionalLight3D.new()
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 120.0
+	sun.directional_shadow_max_distance = 140.0
+	sun.shadow_blur = 1.5
 	add_child(sun)
 	env = Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_white = 6.0
 	env.ssao_enabled = true
+	env.ssao_radius = 1.6
+	env.ssao_intensity = 1.8
 	env.glow_enabled = true
+	env.glow_intensity = 0.7
+	env.glow_bloom = 0.04
+	env.glow_hdr_threshold = 1.0
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.08
+	env.adjustment_saturation = 1.08
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -124,16 +150,23 @@ func _process(delta: float) -> void:
 func _frame(delta: float) -> void:
 	var day := Clock.daylight()
 	var rain: float = life.rain if life else 0.0
-	# sun swings east to west through the day; at night it becomes a dim moon
-	var t := clampf((Clock.hour() - 5.5) / 15.0, 0.0, 1.0)
-	sun.rotation = Vector3(deg_to_rad(-25.0 - 40.0 * sin(t * PI)), deg_to_rad(lerpf(110.0, -70.0, t)), 0)
+	var hour := Clock.hour()
+	var key := 0
+	while hour >= float(SKY[key + 1][0]):
+		key += 1
+	var f := (hour - float(SKY[key][0])) / (float(SKY[key + 1][0]) - float(SKY[key][0]))
+	var a: Array = SKY[key]
+	var b: Array = SKY[key + 1]
+	# sun swings east to west, low at each end of the day; at night it becomes a dim moon
+	var t := clampf((hour - 5.5) / 15.0, 0.0, 1.0)
+	sun.rotation = Vector3(deg_to_rad(-14.0 - 50.0 * sin(t * PI)), deg_to_rad(lerpf(110.0, -70.0, t)), 0)
 	if day <= 0.0:
 		sun.rotation = Vector3(deg_to_rad(-55.0), deg_to_rad(30.0), 0)
-	sun.light_energy = lerpf(0.1, 1.0, day) * (1.0 - rain * 0.5)
-	sun.light_color = Color("9db4ff").lerp(Color("ffe0b0").lerp(Color("fff6e6"), day), day)
-	env.ambient_light_color = Color("222b48").lerp(Color("b9c6d8"), day).lerp(Color("707a86"), rain * 0.5)
-	env.ambient_light_energy = lerpf(0.5, 0.7, day)
-	env.background_color = Color("06080f").lerp(Color("5f7f9a"), day).lerp(Color("4a5560"), rain * day)
+	sun.light_energy = lerpf(a[2], b[2], f) * (1.0 - rain * 0.45) + (life.flash if life else 0.0)
+	sun.light_color = Color(String(a[1])).lerp(Color(String(b[1])), f)
+	env.ambient_light_color = Color(String(a[3])).lerp(Color(String(b[3])), f).lerp(Color("707a86"), rain * 0.5 * day)
+	env.ambient_light_energy = lerpf(a[4], b[4], f)
+	env.background_color = Color("05070d").lerp(Color("5f7f9a"), day).lerp(Color("4a5560"), rain * day)
 	street.set_night(1.0 - day)
 	# camera follows the player
 	zoom = clampf(zoom, 10.0, 60.0)
@@ -280,6 +313,8 @@ func _on_noise(pos: Vector3, radius: float, kind: String) -> void:
 func _on_hour(hour: int) -> void:
 	if hour == 4:
 		life.new_day()
+	if (hour == 7 or hour == 17) and not Clock.is_weekend():
+		Sfx.play("whistle", null, -14.0)   # the plant whistle: shifts start and end
 
 
 ## Jump the clock forward (sleep, work) and put everyone where they should be.

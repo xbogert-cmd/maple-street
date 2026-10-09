@@ -192,7 +192,7 @@ func _process(delta: float) -> void:
 			_watch(0.2)
 	_bubble.text = "" if not bubble_on else ("!" if state == "alarm" else ("?" if notice > 0.05 else ""))
 	_bubble.modulate = Color("ff5a4a") if state == "alarm" else Color("ffd84a")
-	_name.visible = bubble_on and state != "sleep" and global_position.distance_to(player.global_position) < 7.0
+	_name.visible = bubble_on and state != "sleep" and global_position.distance_to(player.global_position) < 3.5
 
 
 func _routine() -> void:

@@ -33,6 +33,8 @@ var body_in_trunk: Neighbour
 var _attended := 0.0
 var _props: Node3D
 var _rain_fx: CPUParticles3D
+var flash := 0.0            # lightning: extra light for a moment
+var _thunder_in := 20.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -60,7 +62,7 @@ func _ready() -> void:
 			dog.setup(st.houses[h.lot], main.player, [Color("7a5a3a"), Color("2e2a26"), Color("c9b48a")][dogs.size() % 3])
 			dog.position = Vector3(Street.lot_x(h.lot) + _rng.randf_range(5.0, 13.0), 0, Street.lot_side(h.lot) * 26.0)
 			dogs.append(dog)
-	trunk = {"kind": "trunk", "name": "Car trunk", "node": null, "pos": Vector3.ZERO, "items": [], "locked": false, "disturbed": false, "house": st.home, "bug": false}
+	trunk = {"kind": "trunk", "name": "Car trunk", "node": null, "size": Vector3.ONE, "pos": Vector3.ZERO, "items": [], "locked": false, "disturbed": false, "house": st.home, "bug": false}
 	_rain_fx = CPUParticles3D.new()
 	_rain_fx.amount = 700
 	_rain_fx.lifetime = 0.7
@@ -174,6 +176,13 @@ func _process(delta: float) -> void:
 	var want := 1.0 if rain_from >= 0.0 and h >= rain_from and h < rain_to else 0.0
 	rain = move_toward(rain, want, delta * 0.2)
 	_rain_fx.emitting = rain > 0.3
+	flash = maxf(0.0, flash - delta * 5.0)
+	if rain > 0.8:
+		_thunder_in -= delta
+		if _thunder_in <= 0.0:
+			_thunder_in = _rng.randf_range(18.0, 50.0)
+			flash = 1.6
+			Sfx.play("thunder", null, -4.0)
 	_rain_fx.position = main.player.position + Vector3(0, 14, 0)
 	# street event
 	var on := Clock.minutes >= event_from and Clock.minutes < event_to
