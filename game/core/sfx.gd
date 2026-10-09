@@ -21,8 +21,20 @@ var _tension_now := 0.0
 var _rng := RandomNumberGenerator.new()
 
 
+var volume := 0.6                # master volume 0..1; the - and = keys change it
+
+
+func _unhandled_key_input(e: InputEvent) -> void:
+	var k := (e as InputEventKey).physical_keycode
+	if e.is_pressed() and (k == KEY_MINUS or k == KEY_EQUAL):
+		volume = clampf(volume + (-0.1 if k == KEY_MINUS else 0.1), 0.0, 1.0)
+		AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.001)))
+		Game.say("Volume %d%%" % roundi(volume * 100.0))
+
+
 func _ready() -> void:
 	_rng.seed = 1984
+	AudioServer.set_bus_volume_db(0, linear_to_db(volume))
 	_streams = {
 		# footsteps: a heel knock on boards, a sharper tap on pavement, a soft brush through grass
 		"step_wood": _wav(_join([_mix(_tone(92.0, 0.07, 0.5, 45.0), _noise(0.03, 0.3, 90.0, 0.5)), _silence(0.03), _noise(0.03, 0.1, 80.0, 0.4)])),

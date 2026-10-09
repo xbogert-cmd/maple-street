@@ -153,11 +153,11 @@ func animate(speed: float, delta: float) -> bool:
 			fore = [-0.75, -0.65]
 			lean = maxf(lean, 0.14)
 			nod = 0.2
-		"carry":     # arms up, steadying someone across the shoulders
-			arm = [-2.1, -2.1]
-			fore = [-1.5, -1.5]
-			lean = 0.2
-			nod = 0.25
+		"carry":     # right arm hooked round the legs of someone folded over that shoulder
+			arm[1] = -1.25
+			fore[1] = -1.7
+			lean = 0.16
+			nod = 0.15
 		"strike":    # wind up with the right arm, then bring it down
 			var hit := progress > 0.72
 			arm = [-0.9, -0.5 if hit else -3.0]
@@ -212,16 +212,22 @@ func set_down(on: bool, fall := false) -> void:
 		position.y = lift
 
 
-## Face down across someone's shoulders, limbs hanging. Off returns to lying on the ground.
+const SLUNG_BACK := 0.55    # how far the hanging torso leans away from straight down
+
+## Folded at the waist over someone's shoulder: torso head-down behind, legs down the front.
+## The carrier turns this figure to face backwards. Off returns to lying on the ground.
 func set_slung(on: bool) -> void:
 	if not on:
 		set_down(true)
 		return
 	if _tw:
 		_tw.kill()
-	rotation.x = PI * 0.5
+	rotation.x = PI - SLUNG_BACK
 	position.y = 0.0
-	_limp(-1.1, -2.3)
+	_limp(-2.05, -2.9)
+	_shins[0].rotation.x = 0.0
+	_shins[1].rotation.x = 0.12
+	_arms[1].rotation.x = -2.7
 
 
 func is_down() -> bool:

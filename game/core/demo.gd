@@ -307,9 +307,12 @@ func acts() -> void:
 	while not main.interact.busy.is_empty():
 		await get_tree().process_frame
 	await press("Carry")
+	main.player.figure.rotation.y = PI * 0.25
 	await shot("6_carry", 0.5)
 	main.player.figure.rotation.y = -PI * 0.25
 	await shot("7_carry_side", 0.3)
+	main.player.figure.rotation.y = PI * 1.25
+	await shot("7_carry_back", 0.3)
 	main.player.sneaking = true
 	await press("Put")
 	await shot("8_sneak", 0.5)

@@ -23,10 +23,11 @@ func _process(delta: float) -> void:
 		if _slung:
 			_slung.figure.set_slung(true)
 	if _slung:
-		# face down across the shoulders, head to one side
+		# folded over the right shoulder: the waist (0.86 m up the figure) sits on the shoulder
 		var yaw := p.figure.rotation.y
-		_slung.figure.rotation.y = yaw + PI * 0.5
-		_slung.global_position = p.global_position + Vector3(0, 1.52, 0) - Vector3(cos(yaw), 0, -sin(yaw)) * 1.0 - Vector3(sin(yaw), 0, cos(yaw)) * 0.14
+		var a := Figure.SLUNG_BACK
+		_slung.figure.rotation.y = yaw + PI
+		_slung.global_position = p.global_position + Vector3(cos(yaw), 0, -sin(yaw)) * 0.24 + Vector3(0, 1.58 + 0.86 * cos(a), 0) + Vector3(sin(yaw), 0, cos(yaw)) * (0.86 * sin(a) + 0.04)
 	p.figure.action = String(busy.get("anim", "")) if not busy.is_empty() else ("carry" if _slung else "")
 	if not busy.is_empty():
 		p.figure.progress = 1.0 - float(busy.left) / float(busy.total)
