@@ -8,6 +8,8 @@ var tag := ""            # "front", "back" or "" for windows
 var locked := true
 var open := false
 var key_copied := false
+var picked := false       # opened by the player and not locked again
+var forced := false       # window latch forced: leaves marks
 var inside_pos: Vector3
 var outside_pos: Vector3
 var leaf: Node3D         # door only

@@ -11,6 +11,7 @@ var sneaking := false
 var cam_yaw := PI * 0.25
 var frozen := false          # menus, timed actions
 var speed_now := 0.0
+var carrying: Neighbour       # a body over the shoulder
 var noise_radius := 0.0      # how far the current movement can be heard
 
 
@@ -42,8 +43,10 @@ func _physics_process(delta: float) -> void:
 		dir = Vector3(ix, 0, iz).rotated(Vector3.UP, cam_yaw)
 	var running := Input.is_physical_key_pressed(KEY_SHIFT) and not sneaking
 	var top := SNEAK if sneaking else (RUN if running else WALK)
-	if Game.fatigue > 80.0:
+	if Game.fatigue > 80.0 or Game.hunger > 85.0:
 		top *= 0.8
+	if carrying:
+		top = minf(top, 1.5)
 	if dir.length() > 0.1:
 		dir = dir.normalized()
 		velocity = dir * top

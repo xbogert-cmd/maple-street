@@ -23,6 +23,7 @@ var shop_door := Vector3(-20, 0, -9.2)
 var exit_west := Vector3(X0 + 2, 0, 5.0)
 var park_center := Vector3(140, 0, 0)
 var nav: NavigationRegion3D
+var plant: House                        # the workplace, far off the street
 var _lamps: Array[OmniLight3D] = []
 var _lamp_heads: Array[MeshInstance3D] = []
 var _rng := RandomNumberGenerator.new()
@@ -41,6 +42,16 @@ func build(c: Dictionary) -> void:
 	_park()
 	_west_end()
 	_lamps_row()
+	plant = House.new()
+	plant.tpl = Templates.PLANT.duplicate(true)
+	plant.family = "plant"
+	plant.wall_color = Color("b8bcc0")
+	nav.add_child(plant)
+	plant.position = Vector3(40, 0, -320)
+	plant.build()
+	plant.set_cutaway(true)
+	plant.set_lit(true)
+	Build.solid(nav, Vector3(40, 1.0, 26), Vector3(52, -0.5, -314), Build.L_WALL)
 
 
 static func lot_side(i: int) -> float:
@@ -262,7 +273,7 @@ func bake_nav() -> void:
 	var nm := NavigationMesh.new()
 	nm.cell_size = 0.25
 	nm.cell_height = 0.25
-	nm.agent_radius = 0.25
+	nm.agent_radius = 0.0   # doorways are under a metre; any erosion closes them
 	nm.agent_height = 1.75
 	nm.agent_max_climb = 0.25
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
