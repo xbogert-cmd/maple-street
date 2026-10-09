@@ -182,6 +182,8 @@ func _process(_delta: float) -> void:
 		bits.append("INSIDE THE %s HOUSE" % String(Game.ctx.family).to_upper())
 	elif zone == "yard":
 		bits.append("In the %s yard" % Game.ctx.family)
+	elif zone == "front":
+		bits.append("Outside the %s house" % Game.ctx.family)
 	if zone != "home" and Clock.daylight() < 0.5:
 		bits.append("In the light" if float(Game.ctx.get("light", 1.0)) > 0.45 else "In shadow")
 	_needs.text = "   ".join(bits)

@@ -4,7 +4,7 @@ extends Node
 signal hour_changed(hour: int)
 signal day_changed(day: int)
 
-const SEC_PER_MIN := 0.75
+const SEC_PER_MIN := 1.1
 const DAY_NAMES: Array[String] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 var minutes: float = 7.0 * 60.0

@@ -173,6 +173,9 @@ func _lot(h: Dictionary) -> void:
 	Build.box(self, Vector3(0.1, 1.0, 0.1), mb + Vector3.UP * 0.5, Color("5a4a3a"))
 	Build.box(self, Vector3(0.03, 0.18, 0.1), mb + Vector3(0.17, 1.2, 0.1), Color("c0392b"))
 	_outdoor("mailbox", "Mailbox", Vector3(0.3, 0.25, 0.5), mb + Vector3.UP * 1.1, Color("3c5a8a"), house)
+	# the name on the mailbox, readable from the street
+	var plate := Build.label(self, "YOUR HOUSE" if i == int(cast.home) else String(h.family).to_upper(), mb + Vector3.UP * 2.1, 96)
+	plate.modulate = Color("f1ede2") if i != int(cast.home) else Color("f2c94c")
 	var tc := Vector3(x0 + 19.4, 0, s * 9.0)
 	Build.cyl(self, 0.3, 0.8, tc + Vector3.UP * 0.4, Color("7a8480"), 0.34, 10)
 	Build.cyl(self, 0.36, 0.08, tc + Vector3.UP * 0.84, Color("5c6660"), -1.0, 10)
