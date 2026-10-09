@@ -185,7 +185,12 @@ func test_4d_body_and_agent() -> void:
 	t.check(a != null and b != null, "a couple at home")
 	if a == null or b == null:
 		return
-	a.global_position = b.global_position + b.facing() * 2.0
+	# out in the open, so no wall is in the way
+	b.stop()
+	b._next_activity = Clock.minutes + 999.0
+	b.global_position = Vector3(60, 0, 3)
+	b.figure.rotation.y = PI
+	a.global_position = Vector3(60, 0, 0)
 	a.knock_out()
 	await _wait(1.0)
 	t.check(a.found and b.state == "alarm", "a body in plain sight is found (found %s, state %s)" % [a.found, b.state])

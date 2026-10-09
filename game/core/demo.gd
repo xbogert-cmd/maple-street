@@ -170,3 +170,33 @@ func walk() -> void:
 	print("DEMO ran to ", main.player.global_position, " zone ", Game.ctx.zone)
 	await shot("2_ran")
 	get_tree().quit()
+
+
+## The livelier scenes: the plant shift, a barbecue, a dog, rain, behind a house, the police.
+func scenes() -> void:
+	Clock.running = true
+	await at(7.5, main.street.bus_stop, 20.0)
+	await press("Ride")
+	await shot("1_plant", 1.5)
+	main.shift.finish()
+	Clock.minutes = 5.0 * 1440.0 + 4.0 * 60.0
+	main.life.new_day()
+	var host: House = main.street.houses[main.life.event_host]
+	await at(13.0, Vector3(Street.lot_x(host.index) + 10.0, 0, Street.lot_side(host.index) * 27.0), 22.0)
+	await shot("2_barbecue", 1.0)
+	var dog: Dog = main.life.dogs[0]
+	main.life.rain_from = 0.0
+	main.life.rain_to = 24.0
+	main.life.rain = 1.0
+	await at(22.0, dog.global_position + Vector3(4, 0, 0), 18.0)
+	await shot("3_dog_rain_night", 1.5)
+	main.life.rain_from = -1.0
+	main.life.rain = 0.0
+	var north: House = main.street.houses[2]
+	await at(15.0, north.portal("back").outside_pos if north.portal("back") else north.global_position, 16.0)
+	await shot("4_behind_house", 0.8)
+	main.law.blown = true
+	main.law._send_officers()
+	await at(16.0, Vector3(-18, 0, 3), 24.0)
+	await shot("5_police", 1.0)
+	get_tree().quit()

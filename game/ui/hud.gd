@@ -512,7 +512,7 @@ func _feeling(s: float) -> String:
 
 
 func open_pause() -> void:
-	open_text("Paused", "[b]Move[/b] W A S D    [b]Run[/b] Shift    [b]Sneak[/b] C\n[b]Act[/b] E, R    [b]Force[/b] F    [b]Notebook[/b] N    [b]Pockets[/b] I\n[b]Zoom[/b] pinch, or - and =\n\nThe game saves only when you sleep in your own bed.", [
+	open_text("Paused", "[b]Move[/b] W A S D    [b]Run[/b] Shift    [b]Sneak[/b] C\n[b]Act[/b] E, R, T    [b]Force[/b] F    [b]Notebook[/b] N    [b]Pockets[/b] I\n[b]Zoom[/b] pinch, or - and =\n\nThe game saves only when you sleep in your own bed.", [
 		["Quit to desktop", func() -> void: get_tree().quit()],
 		["Resume", Callable()],
 	], true)

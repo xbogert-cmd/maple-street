@@ -135,9 +135,41 @@ func process() -> String:
 func planted_bug(f: Dictionary) -> void:
 	f.bug = true
 	Game.take("bug")
-	Game.mission.stage = "wait"
-	Game.mission.until = Clock.minutes + 20.0 * 60.0
-	Game.note("The device is fitted to the %s telephone." % Game.mission.family)
+	var h: House = f.house
+	var m := Game.mission
+	if m.get("type", "") == "bug" and m.stage == "get" and m.lot == h.index:
+		m.stage = "wait"
+		m.until = Clock.minutes + 20.0 * 60.0
+	Game.note("The device is fitted to the %s telephone. Listen in from your radio set." % h.family)
+
+
+## At your own set: what the taps on the street are picking up.
+func listen_to_taps() -> String:
+	var lines: Array[String] = []
+	for h: House in main.street.houses:
+		var phone: Dictionary = h.find_furn("phone")
+		if phone.is_empty() or not phone.bug:
+			continue
+		var home_now: Array[String] = []
+		for n: Neighbour in h.residents:
+			if n.state == "dead":
+				continue
+			var id := int(n.d.id)
+			if not n.is_away():
+				home_now.append("%s (%s)" % [n.d.first, "asleep" if n.state == "sleep" else "up"])
+			if float(n.d.leave) > 0.0 and not Game.knows(id, "hours"):
+				Game.learn(id, "hours")
+				lines.append("%s talks about being out %s to %s." % [n.d.first, Life.hhmm(n.d.leave), Life.hhmm(n.d.back)])
+			if n.d.secret != "" and not Game.knows(id, "secret") and _rng.randf() < 0.4:
+				Game.learn(id, "secret")
+				lines.append("[color=#e8a23a]A hushed call: %s %s.[/color]" % [n.full_name(), Life.SECRET_TEXT[n.d.secret]])
+			if n.d.agent and not Game.knows(id, "agent") and _rng.randf() < 0.4:
+				Game.learn(id, "agent")
+				lines.append("[color=#e2574c]%s reads a report down the line to a field office. He is Bureau.[/color]" % n.full_name())
+		lines.append("[b]%s house[/b]: %s." % [h.family, "nobody home" if home_now.is_empty() else "home now: " + ", ".join(home_now)])
+	if lines.is_empty():
+		return "You have no devices in place. The Centre leaves one at a dead drop after each completed job."
+	return "\n".join(lines)
 
 
 ## Leaving the goods at the dead drop. Returns true if this drop wanted something we had.
@@ -169,6 +201,11 @@ func _complete() -> void:
 	Game.mission = {}
 	next_at = Clock.minutes + Clock.until(19.0)
 	Game.note("Job done. Intelligence sent home: %d." % Game.intel)
+	if Game.pickup.is_empty():
+		# the Centre rewards good work with a spare listening device
+		var i: int = _rng.randi() % main.street.drops.size()
+		Game.pickup = {"drop": i, "items": ["bug"], "money": 0}
+		Game.note("The Centre has left something for you at %s in the park." % main.street.drops[i].name)
 
 
 func _process(_delta: float) -> void:

@@ -49,7 +49,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 	if not e.is_pressed() or e.is_echo() or not busy.is_empty():
 		return
 	var k := (e as InputEventKey).physical_keycode
-	var key := "E" if k == KEY_E else ("R" if k == KEY_R else ("F" if k == KEY_F else ""))
+	var key := "E" if k == KEY_E else ("R" if k == KEY_R else ("T" if k == KEY_T else ("F" if k == KEY_F else "")))
 	for o in options:
 		if o.key == key:
 			run(o)
@@ -155,7 +155,7 @@ func _build() -> Array[Dictionary]:
 func _keys(found: Array) -> Array[Dictionary]:
 	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
 	var out: Array[Dictionary] = []
-	var free: Array[String] = ["E", "R"]
+	var free: Array[String] = ["E", "R", "T"]
 	var f_used := false
 	for pair: Array in found:
 		var o: Dictionary = pair[1]
@@ -252,7 +252,7 @@ func _furniture(f: Dictionary, here: House) -> Array[Dictionary]:
 	var m := Game.mission
 	match f.kind:
 		"phone":
-			if not mine and Game.has("bug") and m.get("stage", "") == "get" and m.lot == f.house.index:
+			if not mine and Game.has("bug") and not f.bug and f.house != main.street.plant:
 				out.append(_opt("Fit the listening device", func() -> void: main.missions.planted_bug(f), 8.0, "search"))
 		"radio":
 			if Game.radio_hidden:
@@ -260,6 +260,7 @@ func _furniture(f: Dictionary, here: House) -> Array[Dictionary]:
 			else:
 				out.append(_opt("Listen for the Centre", func() -> void: _listen(), 4.0))
 				out.append(_opt("Hide the radio", func() -> void: _radio_hide(true), 3.0))
+				out.append(_opt("Listen to the telephone taps", func() -> void: _taps(), 4.0))
 		"darkroom":
 			if m.get("stage", "") == "process":
 				out.append(_opt("Work at the bench", func() -> void: _bench(), 6.0))
@@ -304,6 +305,11 @@ func _listen() -> void:
 	if Game.mission.is_empty() and Clock.minutes >= main.missions.next_at:
 		main.missions.offer()
 	main.hud.open_text("From the Centre", main.missions.brief(), [["Understood", Callable()]])
+
+
+func _taps() -> void:
+	Clock.advance(15.0)
+	main.hud.open_text("On the taps", main.missions.listen_to_taps(), [["Headphones off", Callable()]])
 
 
 func _in_stash(id: String) -> bool:

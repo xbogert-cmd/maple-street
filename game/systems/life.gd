@@ -31,10 +31,22 @@ var dogs: Array[Dog] = []
 var trunk: Dictionary = {}  # the car boot, shaped like a furniture container
 var body_in_trunk: Neighbour
 var _attended := 0.0
+var _props: Node3D
 var _rain_fx: CPUParticles3D
 var _rng := RandomNumberGenerator.new()
 
 
+const HOW_TO := """You are a sleeper agent. On paper you are the new janitor at the defence plant, and half this street works there.
+
+[b]Tonight:[/b] after 7 PM, take the radio out of hiding in your study and listen for orders. Your camera and lockpicks are under the bedroom floor.
+
+[b]The work:[/b] learn when a house is empty. Cars in the drive and lit windows tell you who is home. Get in, find the papers, photograph them, put everything back, lock up behind you. Develop the film at your bench and leave it at the dead drop in the park.
+
+[b]The street is watching.[/b] Yards, locks and windows are how people get noticed. Darkness, sneaking (C) and rain hide you. A "?" over a neighbour means they are working out what they see. A "!" means they are going for the telephone.
+
+[b]Keep your cover.[/b] Ride the plant bus to work on weekday mornings. Eat. Sleep in your own bed, which saves the game.
+
+If you are caught, that agent is finished. Press Esc for the controls."""
 const FILLER: Array[String] = ["County fair opens Saturday", "Plant wins new Air Force contract", "School board votes on new gymnasium", "Water main work on Elm Street next week", "Bowling league standings inside", "Church bake sale raises record sum", "Hardware store marks forty years"]
 
 
@@ -102,6 +114,8 @@ func new_run() -> void:
 			_clue(h, ["mailbox", "desk"][_rng.randi() % 2], "%s's shift card" % n.d.first, n, "hours")
 	main.missions.next_at = Clock.minutes + Clock.until(19.0)
 	Game.note("Day one. Radio contact after 7 PM. Your kit is under the bedroom floor.")
+	if not Game.args.has("demo") and not Game.args.has("shot") and DisplayServer.get_name() != "headless":
+		main.hud.open_text.call_deferred("Maple Street, 1984", HOW_TO, [["Begin", Callable()]], true)
 
 
 func furnish_home() -> void:
@@ -161,7 +175,16 @@ func _process(delta: float) -> void:
 	var on := Clock.minutes >= event_from and Clock.minutes < event_to
 	if on and event_lot < 0:
 		Game.say("The barbecue at the %s place has started." % main.street.houses[event_host].family)
+		_props = Node3D.new()
+		add_child(_props)
+		var c := Vector3(Street.lot_x(event_host) + 10.0, 0, Street.lot_side(event_host) * 23.0)
+		Build.box(_props, Vector3(2.4, 0.75, 0.9), c + Vector3(-2, 0.375, 0), Color("d9d4c7"))
+		Build.cyl(_props, 0.4, 0.5, c + Vector3(2, 0.85, 0), Color("2a2a2c"), 0.3)
+		Build.cyl(_props, 0.04, 0.7, c + Vector3(2, 0.35, 0), Color("55585c"))
 	elif not on and event_lot >= 0:
+		if _props:
+			_props.queue_free()
+			_props = null
 		if _attended < 15.0:
 			for n: Neighbour in main.neighbours:
 				if float(n.d.nosy) > 0.5:

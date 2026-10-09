@@ -52,6 +52,7 @@ func build(c: Dictionary) -> void:
 	plant.set_cutaway(true)
 	plant.set_lit(true)
 	Build.solid(nav, Vector3(40, 1.0, 26), Vector3(52, -0.5, -314), Build.L_WALL)
+	Build.box(self, Vector3(120, 0.02, 100), Vector3(52, -0.03, -314), Color("3f4347"))
 
 
 static func lot_side(i: int) -> float:

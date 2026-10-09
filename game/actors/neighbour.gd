@@ -40,6 +40,7 @@ var _next_activity := 0.0
 var _look_at := Vector3.ZERO
 var _look_time := 0.0
 var _bubble: Label3D
+var _name: Label3D
 var bubble_on := true
 var _dial := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -52,7 +53,9 @@ func setup(person: Dictionary, h: House, s: Street, p: Player) -> void:
 	player = p
 	_rng.seed = int(s.cast.seed) * 31 + int(person.id)
 	make_figure(person)
-	_bubble = Build.label(self, "", Vector3(0, 2.3 * float(person.scale), 0), 96)
+	_bubble = Build.label(self, "", Vector3(0, 2.5 * float(person.scale), 0), 96)
+	_name = Build.label(self, full_name(), Vector3(0, 2.05 * float(person.scale), 0), 30)
+	_name.modulate = Color(0.95, 0.93, 0.85, 0.9)
 	roll_day()
 
 
@@ -189,6 +192,7 @@ func _process(delta: float) -> void:
 			_watch(0.2)
 	_bubble.text = "" if not bubble_on else ("!" if state == "alarm" else ("?" if notice > 0.05 else ""))
 	_bubble.modulate = Color("ff5a4a") if state == "alarm" else Color("ffd84a")
+	_name.visible = bubble_on and state != "sleep" and global_position.distance_to(player.global_position) < 7.0
 
 
 func _routine() -> void:
