@@ -301,6 +301,8 @@ func _watch(dt: float) -> void:
 		return
 	var dist := global_position.distance_to(player.global_position)
 	var rate := clampf(1.5 - dist / 16.0, 0.3, 1.5) * (1.6 if j.severe else 0.8) * (1.5 if d.agent else 1.0)
+	if notice <= 0.0:
+		Sfx.play("notice", global_position)
 	notice = minf(1.0, notice + dt * rate)
 	if state != "alarm" and arrived:
 		face(player.global_position)
@@ -343,6 +345,7 @@ func alarm(text: String) -> void:
 		figure.set_down(false)
 	alarm_text = text
 	state = "alarm"
+	Sfx.play("alarm", global_position, 4.0)
 	_dial = 0.0
 	speed = 2.6
 	Game.noise.emit(global_position, 14.0, "shout")
@@ -353,7 +356,7 @@ func hear(pos: Vector3, kind: String) -> void:
 	if asset:
 		return
 	if state == "sleep":
-		if kind in ["shout", "struggle", "glass"] or _rng.randf() < 0.25:
+		if kind in ["shout", "struggle", "glass"] or _rng.randf() < (0.5 if kind == "steps" else 0.2):
 			_wake()
 			_look_at = pos
 			_look_time = 8.0
@@ -362,7 +365,10 @@ func hear(pos: Vector3, kind: String) -> void:
 		_look_at = pos
 		_look_time = 6.0
 		_next_activity = Clock.minutes + 6.0
-		if kind in ["bark", "struggle", "glass", "lockpick"] and house.contains(global_position):
+		if kind == "steps" and house.contains(pos):
+			# someone is moving about in the house: go and see
+			go_to(pos)
+		elif kind in ["bark", "struggle", "glass", "lockpick", "steps"] and house.contains(global_position):
 			# go and look out of the nearest window toward the noise
 			var best := global_position
 			var best_d := 1e9
@@ -377,6 +383,7 @@ func hear(pos: Vector3, kind: String) -> void:
 func knock_out() -> void:
 	stop()
 	state = "ko"
+	Sfx.play("thud", global_position)
 	speed = 1.5
 	figure.set_down(true)
 	figure.position.y = 0.2

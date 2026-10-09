@@ -98,6 +98,7 @@ func objective() -> String:
 
 
 func photographed() -> void:
+	Sfx.play("shutter")
 	Game.give(Game.item("film", {"mission": Game.mission.n}))
 	Game.mission.stage = "process"
 	Game.note("Photographed the %s." % Game.mission.doc)

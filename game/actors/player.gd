@@ -12,7 +12,8 @@ var cam_yaw := PI * 0.25
 var frozen := false          # menus, timed actions
 var speed_now := 0.0
 var carrying: Neighbour       # a body over the shoulder
-var noise_radius := 0.0      # how far the current movement can be heard
+var noise_radius := 0.0
+var _step := 0.0      # how far the current movement can be heard
 
 
 func _ready() -> void:
@@ -58,4 +59,9 @@ func _physics_process(delta: float) -> void:
 	speed_now = velocity.length()
 	noise_radius = 0.0 if speed_now < 0.1 or sneaking else (11.0 if running else 4.0)
 	figure.animate(speed_now, delta)
+	if speed_now > 0.1:
+		_step -= delta * speed_now
+		if _step <= 0.0:
+			_step = 1.5
+			Sfx.play("step", null, -22.0 if sneaking else (-6.0 if running else -12.0))
 	figure.scale.y = lerpf(figure.scale.y, 0.82 if sneaking else 1.0, minf(1.0, delta * 10.0))

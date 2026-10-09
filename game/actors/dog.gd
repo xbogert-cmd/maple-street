@@ -54,6 +54,7 @@ func _process(delta: float) -> void:
 	if _bark_t <= 0.0:
 		_bark_t = 1.5
 		Game.noise.emit(global_position, 18.0, "bark")
+		Sfx.play("bark", global_position, 2.0)
 
 
 func feed() -> void:

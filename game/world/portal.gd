@@ -20,6 +20,7 @@ func set_open(on: bool) -> void:
 	if is_window or on == open:
 		return
 	open = on
+	Sfx.play("door", global_position, -4.0)
 	leaf.rotation.y = -PI * 0.5 if on else 0.0
 	body.collision_layer = 0 if on else Build.L_DOOR
 

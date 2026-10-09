@@ -78,7 +78,8 @@ func can_see(target: Vector3, light: float, sneaking: bool) -> bool:
 	var dist := to.length()
 	if dist > Rules.sight_range(light, sneaking):
 		return false
-	if dist > (1.2 if sneaking else 2.2) and facing().dot(to.normalized()) < 0.34:
+	# footsteps give you away close up, unless you are sneaking
+	if dist > (0.0 if sneaking else 2.2) and facing().dot(to.normalized()) < 0.34:
 		return false
 	var q := PhysicsRayQueryParameters3D.create(from, target + Vector3.UP * (0.7 if sneaking else 1.2), Build.L_WALL | Build.L_DOOR)
 	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()

@@ -89,6 +89,7 @@ func say(text: String) -> void:
 
 func note(text: String) -> void:
 	journal.append("%s — %s" % [Clock.stamp(), text])
+	Sfx.play("note")
 	toast.emit(text)
 	changed.emit()
 

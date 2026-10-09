@@ -114,7 +114,7 @@ func new_run() -> void:
 			_clue(h, ["mailbox", "desk"][_rng.randi() % 2], "%s's shift card" % n.d.first, n, "hours")
 	main.missions.next_at = Clock.minutes + Clock.until(19.0)
 	Game.note("Day one. Radio contact after 7 PM. Your kit is under the bedroom floor.")
-	if not Game.args.has("demo") and not Game.args.has("shot") and DisplayServer.get_name() != "headless":
+	if Game.started and Game.args.get("demo", "title") == "title" and not Game.args.has("shot") and DisplayServer.get_name() != "headless":
 		main.hud.open_text.call_deferred("Maple Street, 1984", HOW_TO, [["Begin", Callable()]], true)
 
 
@@ -166,6 +166,10 @@ func _process(delta: float) -> void:
 	var mins := delta / Clock.SEC_PER_MIN * Clock.rate
 	Game.hunger = minf(100.0, Game.hunger + mins * 100.0 / (22.0 * 60.0))
 	Game.fatigue = minf(100.0, Game.fatigue + mins * 100.0 / (19.0 * 60.0))
+	if Game.hunger >= 100.0:
+		Game.fatigue = minf(100.0, Game.fatigue + mins * 0.15)   # running on empty
+	if Game.fatigue >= 100.0 and not main.shift.active and Game.ended == "":
+		_collapse()
 	var h := Clock.hour()
 	var want := 1.0 if rain_from >= 0.0 and h >= rain_from and h < rain_to else 0.0
 	rain = move_toward(rain, want, delta * 0.2)
@@ -224,6 +228,19 @@ func sleep() -> void:
 	main.skip(mins)
 	Save.write(main)
 	Game.say("You slept until %s. Game saved." % Clock.stamp() if night else "You napped for two hours. Game saved.")
+
+
+## Awake too long: you go down where you stand.
+func _collapse() -> void:
+	Game.fatigue = 45.0
+	var zone: String = Game.ctx.get("zone", "")
+	main.skip(300.0)
+	if zone == "home":
+		Game.note("You passed out on your feet and lost five hours.")
+	elif zone == "inside":
+		Game.end("arrested", "You passed out from exhaustion inside the %s house. They found you there." % Game.ctx.family)
+	else:
+		Game.incident_add(8.0, "You passed out from exhaustion and were found asleep outdoors. People are talking.")
 
 
 ## 4 AM turnover.

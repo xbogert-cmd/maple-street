@@ -173,6 +173,7 @@ func _send_officers() -> void:
 		o.global_position = Vector3(-28, 0, 1.0 + i)
 		o.speed = 3.0
 		officers.append(o)
+	Sfx.play("siren", null, -2.0)
 	Game.say("A police car has pulled in at the end of the street.")
 
 

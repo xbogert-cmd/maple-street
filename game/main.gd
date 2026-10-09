@@ -115,6 +115,9 @@ func _process(delta: float) -> void:
 		_tick = 0.5
 		_households()
 		_fog()
+		# footsteps carry on other people's property
+		if player.noise_radius > 0.0 and Game.ctx.get("zone", "") in ["inside", "yard"]:
+			Game.noise.emit(player.position, player.noise_radius, "steps")
 		Game.heat = Rules.heat(suspicions(), Game.incident)
 
 
@@ -152,6 +155,8 @@ func _frame(delta: float) -> void:
 		house.set_cutaway(cut)
 	_inside = h
 	_context(h, day)
+	Sfx.listener = player.position
+	Sfx.ambience(rain, (1.0 - day) if Clock.running else 0.0, h != null or shift.active)
 
 
 ## Work out what the player is up to, for anyone watching (Rules.judge reads this).

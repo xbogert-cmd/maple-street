@@ -200,3 +200,13 @@ func scenes() -> void:
 	await at(16.0, Vector3(-18, 0, 3), 24.0)
 	await shot("5_police", 1.0)
 	get_tree().quit()
+
+
+## The title menu, then the first-night briefing.
+func title() -> void:
+	if not Game.started:
+		await shot("1_title", 1.0)
+		main.hud._restart(false)
+	else:
+		await shot("2_intro", 1.5)
+		get_tree().quit()

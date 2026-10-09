@@ -124,7 +124,7 @@ func _ready() -> void:
 	Game.changed.connect(func() -> void:
 		if _window.visible and _refresh.is_valid():
 			_refresh.call())
-	if not Game.started and not Game.args.has("demo") and not Game.args.has("shot"):
+	if not Game.started and Game.args.get("demo", "title") == "title" and not Game.args.has("shot"):
 		open_menu()
 
 

@@ -31,6 +31,8 @@ func _process(delta: float) -> void:
 		if busy.noise != "" and _noise_t <= 0.0:
 			_noise_t = 1.0
 			Game.noise.emit(p.global_position, busy.radius, busy.noise)
+		if busy.noise == "lockpick" and fmod(busy.left, 0.45) < delta:
+			Sfx.play("pick")
 		if busy.left <= 0.0:
 			var done: Callable = busy.done
 			busy = {}
@@ -104,8 +106,8 @@ func _build() -> Array[Dictionary]:
 					found.append([dist, _opt("Chat with %s" % n.d.first, func() -> void: _chat(n), 3.0)])
 					if Game.knows(int(n.d.id), "secret") and not n.asset:
 						found.append([dist + 0.01, _opt("Lean on %s" % n.d.first, func() -> void: _lean(n), 4.0)])
-				var behind := n.facing().dot((pos - n.global_position).normalized()) < 0.0
-				found.append([dist, _opt("Knock %s out" % n.d.first, func() -> void: _takedown(n, behind), 0.8, "attack", "" if behind else "struggle", 12.0, true)])
+				var quiet: bool = p.sneaking and n.facing().dot((pos - n.global_position).normalized()) < 0.0
+				found.append([dist, _opt("Knock %s out%s" % [n.d.first, " quietly" if quiet else " (they will see your face)"], func() -> void: _takedown(n, quiet), 0.8, "attack", "" if quiet else "struggle", 12.0, true)])
 	# doors and windows
 	for h in st.houses:
 		if absf(h.global_position.x - pos.x) > 40.0:
@@ -302,6 +304,7 @@ func _listen() -> void:
 		Game.say("Without the one-time pad the numbers mean nothing.")
 		return
 	Clock.advance(5.0)
+	Sfx.play("static")
 	if Game.mission.is_empty() and Clock.minutes >= main.missions.next_at:
 		main.missions.offer()
 	main.hud.open_text("From the Centre", main.missions.brief(), [["Understood", Callable()]])
