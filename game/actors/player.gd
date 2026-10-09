@@ -59,4 +59,4 @@ func _physics_process(delta: float) -> void:
 	noise_radius = 0.0 if speed_now < 0.1 or sneaking else (11.0 if running else 4.0)
 	figure.crouch = sneaking
 	if figure.animate(speed_now, delta):
-		Sfx.step(absf(position.z) < Street.WALK or position.x < 0.0, -20.0 if sneaking else (-5.0 if running else -11.0))
+		Sfx.step(absf(position.z) < Street.WALK or position.x < 0.0, -18.0 if sneaking else (-2.0 if running else -8.0))

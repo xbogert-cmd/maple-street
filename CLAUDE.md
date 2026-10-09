@@ -1,8 +1,10 @@
 # Maple Street — notes for Claude sessions
 
 Single-player sleeper-agent sandbox for Mac (keyboard + trackpad), in the style of Project Zomboid
-without zombies. Godot **4.7.1**, typed GDScript, Forward+ renderer. Every model, sound and icon is
-made by code; there are no art or audio files.
+without zombies. Godot **4.7.1**, typed GDScript, Forward+ renderer. Every model and the icon is made
+by code. Sound is a mix: recorded CC0 clips in `sounds/` (footsteps, doors, paper, locks, blows; the
+owner approved these on 2026-10-09 because synthesised ones did not convince) and synthesised
+ambience in `Sfx`. Drop `<name>_<n>.ogg` into `sounds/` and `Sfx.play("<name>")` picks a variant.
 
 - Design agreed with the owner: `docs/superpowers/specs/2026-10-09-maple-street-design.md`.
 - What is built, what is not, and what the owner has not reviewed yet: `docs/report.md`.

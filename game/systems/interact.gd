@@ -242,6 +242,7 @@ func _portal(pt: Portal, h: House, pos: Vector3) -> Array[Dictionary]:
 func _unlocked(pt: Portal, picked: bool) -> void:
 	pt.locked = false
 	pt.picked = true
+	Sfx.play("lock")
 	if picked:
 		Game.train("locks", 4.0)
 	Game.say("The lock gives.")
@@ -250,6 +251,7 @@ func _unlocked(pt: Portal, picked: bool) -> void:
 func _relock(pt: Portal) -> void:
 	pt.locked = true
 	pt.picked = false
+	Sfx.play("lock")
 	Game.say("Locked, as you found it.")
 
 
@@ -417,11 +419,13 @@ func _kill(n: Neighbour) -> void:
 func _carry(n: Neighbour) -> void:
 	n.carried = true
 	main.player.carrying = n
+	Sfx.play("cloth")
 
 
 func _put_down() -> void:
 	var n: Neighbour = main.player.carrying
 	n.carried = false
+	Sfx.play("thud", null, -6.0)
 	n.global_position = main.player.global_position + main.player.figure.basis.z * 0.8
 	main.player.carrying = null
 

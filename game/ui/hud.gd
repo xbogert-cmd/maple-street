@@ -351,6 +351,7 @@ func open_container(c: Dictionary) -> void:
 	var home: House = main.street.home
 	var mine: bool = c.is_empty() or c.house == home
 	if not c.is_empty():
+		Sfx.play("search", null, -4.0)
 		if not mine and c.house != main.street.plant:
 			c.disturbed = true
 		main.life.read_clues(c)

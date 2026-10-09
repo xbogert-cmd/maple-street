@@ -112,3 +112,14 @@ The owner played and reported eight things. All are changed; none of the sound h
 
 Also: sneaking is now a real crouch, and any hands-on action (lock, search, mop) has a working pose.
 Captures: `docs/shots/doorways.png`, `people.png`, `takedown.png`, `kill.png`, `carry.png`.
+
+## Recorded sound (2026-10-09)
+
+The owner found the synthesised footsteps, doors and other effects unconvincing and approved real
+recordings. 38 clips from Kenney's CC0 "Impact Sounds" and "RPG Audio" packs are in `sounds/`
+(about 0.5 MB): footsteps on wood, concrete and grass, door open and close, paper, lock, lockpick
+tick, rummaging, cloth, punch and body fall. Birds, rain, wind, crickets, thunder, the radio, siren,
+dog and the night score are still synthesised. Volumes are still guesses; `-` and `=` change the
+master volume in play (starts at 60%).
+
+Carrying is now over one shoulder (`docs/shots/carry.png`, `carry_back.png`).
