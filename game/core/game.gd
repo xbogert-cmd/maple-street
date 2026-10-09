@@ -65,7 +65,7 @@ func reset() -> void:
 	skills = {"locks": 0.0, "search": 0.0, "talk": 0.0}
 	upgrades = {}
 	radio_hidden = true
-	worked_today = false
+	worked_today = true    # the game opens on Monday evening, after the first day at the plant
 	missed_shifts = 0
 	writeups = 0
 	fired = false

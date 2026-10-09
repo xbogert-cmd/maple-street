@@ -210,3 +210,61 @@ func title() -> void:
 	else:
 		await shot("2_intro", 1.5)
 		get_tree().quit()
+
+
+## Let a week run at speed with nobody at the controls, printing a line a day. Finds script
+## errors in the daily turnover, the investigator and the search.
+func soak() -> void:
+	Engine.time_scale = float(Game.args.get("speed", "25"))
+	Clock.running = true
+	var frames := 0
+	var t0 := Time.get_ticks_msec()
+	var last_day := 0
+	while Clock.day() <= int(Game.args.get("days", "8")) and Game.ended == "":
+		await get_tree().process_frame
+		frames += 1
+		if Clock.day() != last_day:
+			last_day = Clock.day()
+			var states: Dictionary = {}
+			for n: Neighbour in main.neighbours:
+				states[n.state] = int(states.get(n.state, 0)) + 1
+			print("DAY %d %s heat %.0f incident %.0f investigating %s  %s" % [last_day, Clock.stamp(), Game.heat, Game.incident, main.law.investigating, states])
+			if last_day == 3:
+				Game.incident = 50.0    # stir things up: bring the Bureau in
+			if last_day == 5:
+				Game.incident = 90.0    # and then a search
+	print("SOAK end: %s %s  journal %d lines, %d frames in %d ms" % [Game.ended, Game.end_reason, Game.journal.size(), frames, Time.get_ticks_msec() - t0])
+	for j in Game.journal:
+		print("  ", j)
+	get_tree().quit()
+
+
+## Frame cost with a window open: -- --demo=fps
+func fps() -> void:
+	Clock.running = true
+	for setup: Array in [["day street", 14.0, Vector3(60, 0, 0), 30.0], ["night street", 22.0, Vector3(60, 0, 0), 30.0], ["night wide", 22.0, Vector3(60, 0, 0), 60.0], ["indoors", 20.0, main.street.home.room_pos("living"), 16.0]]:
+		await at(setup[1], setup[2], setup[3])
+		await get_tree().create_timer(1.0).timeout
+		var n := 0
+		var t0 := Time.get_ticks_usec()
+		var proc := 0.0
+		while Time.get_ticks_usec() - t0 < 3000000:
+			await get_tree().process_frame
+			n += 1
+			proc += Performance.get_monitor(Performance.TIME_PROCESS)
+		print("DEMO fps %s: %.0f fps, script+engine process %.2f ms" % [setup[0], n / 3.0, proc / n * 1000.0])
+	get_tree().quit()
+
+
+## One interior of each floor plan, to check doorways and furniture by eye.
+func plans() -> void:
+	Clock.running = false
+	var seen: Dictionary = {}
+	for h: House in main.street.houses:
+		var key: int = h.tpl.w
+		if seen.has(key):
+			continue
+		seen[key] = true
+		await at(13.0, h.to_global(Vector3(h.tpl.w * 0.5, 0, h.tpl.d * 0.5)), 13.0)
+		await shot("plan_%d" % key, 0.8)
+	get_tree().quit()

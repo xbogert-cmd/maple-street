@@ -69,7 +69,7 @@ static func sight_range(light: float, sneaking: bool) -> float:
 static func find_chance(place: String) -> float:
 	match place:
 		"stash":
-			return 0.35
+			return 0.25
 		"floor_safe":
 			return 0.08
 	return 1.0   # pockets, drawers, the fridge

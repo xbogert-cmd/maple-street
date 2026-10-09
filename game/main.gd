@@ -154,6 +154,12 @@ func _frame(delta: float) -> void:
 					break
 		house.set_cutaway(cut)
 	_inside = h
+	# tree tops that would cover the player are hidden; the trunk stays
+	for crown in street.crowns:
+		var to := crown.position - player.position
+		to.y = 0.0
+		var along := clampf(to.dot(toward_cam), 0.0, 14.0)
+		crown.visible = (to - toward_cam * along).length() > 2.6
 	_context(h, day)
 	Sfx.listener = player.position
 	Sfx.ambience(rain, (1.0 - day) if Clock.running else 0.0, h != null or shift.active)

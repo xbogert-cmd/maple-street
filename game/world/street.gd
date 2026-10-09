@@ -24,6 +24,7 @@ var exit_west := Vector3(X0 + 2, 0, 5.0)
 var park_center := Vector3(140, 0, 0)
 var nav: NavigationRegion3D
 var plant: House                        # the workplace, far off the street
+var crowns: Array[MeshInstance3D] = []  # tree tops, hidden when they would cover the player
 var _lamps: Array[OmniLight3D] = []
 var _lamp_heads: Array[MeshInstance3D] = []
 var _rng := RandomNumberGenerator.new()
@@ -158,7 +159,7 @@ func _wall_box(size: Vector3, pos: Vector3, color: Color) -> void:
 func _tree(p: Vector3) -> void:
 	var h := _rng.randf_range(3.5, 5.5)
 	Build.cyl(self, 0.22, h * 0.5, p + Vector3.UP * h * 0.25, Color("5a4330"))
-	Build.cyl(self, 1.7, h * 0.75, p + Vector3.UP * h * 0.8, Color("3d6b3a").lerp(Color("547f3f"), _rng.randf()), 0.2)
+	crowns.append(Build.cyl(self, 1.7, h * 0.75, p + Vector3.UP * h * 0.8, Color("3d6b3a").lerp(Color("547f3f"), _rng.randf()), 0.2))
 	Build.solid(nav, Vector3(0.5, 3.0, 0.5), p + Vector3.UP * 1.5, Build.L_WALL)
 
 
@@ -196,7 +197,7 @@ func _park() -> void:
 			continue
 		_tree(p)
 	Build.cyl(self, 0.6, 3.0, oak + Vector3.UP * 1.5, Color("4a3626"))
-	Build.cyl(self, 3.2, 4.5, oak + Vector3.UP * 4.6, Color("35602f"), 0.4)
+	crowns.append(Build.cyl(self, 3.2, 4.5, oak + Vector3.UP * 4.6, Color("35602f"), 0.4))
 	Build.solid(nav, Vector3(1.2, 3.0, 1.2), oak + Vector3.UP * 1.5, Build.L_WALL)
 	drops = [
 		{"name": "the hollow oak", "pos": oak + Vector3(-1.2, 0, 0)},

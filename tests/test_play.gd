@@ -179,6 +179,7 @@ func test_3_home_life() -> void:
 	# the shift
 	Clock.minutes = 2.0 * 1440.0 + 7.5 * 60.0
 	main.skip(0.0)
+	Game.worked_today = false
 	await _go(main.street.bus_stop)
 	await _press("Ride the plant bus")
 	t.check(main.shift.active, "on shift")

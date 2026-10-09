@@ -28,13 +28,15 @@ Built overnight on 2026-10-09 from the design in
 - Screenshots were taken of the street by day and night, interiors, every panel, the plant, the
   barbecue, rain and the police.
 - The desktop shortcut was launched once and opened the game.
+- Frame rate with vsync off on this Mac: 230 to 330 fps, day, night and indoors.
+- A simulated week with nobody at the controls ran through the daily turnover, the Bureau's
+  arrival and a house search without errors.
 
 ## What has not been checked
 
 - **Nobody has played it by hand.** Movement, doors and prompts were exercised by scripts, but
   feel, pacing and difficulty are untested by a person. Expect the numbers below to need tuning.
 - Sound was generated and wired up but never listened to.
-- Frame rate was not measured.
 - A run longer than a few simulated days has not been played through.
 
 ## Numbers most likely to need tuning
@@ -46,7 +48,7 @@ Built overnight on 2026-10-09 from the design in
 | Time from "!" to the police being called | walk to the phone plus 4 s | `Neighbour._routine` |
 | Police arrival | 40 game minutes (30 s) | `Law.RESPONSE_MIN` |
 | Heat for the investigator / a search | 35 / 65 | `Rules` |
-| Search finds: floor hiding place / floor safe | 35% / 8% per item | `Rules.find_chance` |
+| Search finds: floor hiding place / floor safe | 25% / 8% per item | `Rules.find_chance` |
 | Shift length | about 75 s | `Shift.RATE` |
 
 ## Decisions taken without the owner

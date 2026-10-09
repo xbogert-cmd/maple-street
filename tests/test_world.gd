@@ -62,6 +62,23 @@ func test_1_street_and_routines() -> void:
 			t.check(n.state == "sleep", "%s should be asleep at 3 AM, is %s" % [n.full_name(), n.state])
 
 
+func test_1b_every_room_is_reachable() -> void:
+	await _world()
+	for h: House in main.street.houses:
+		var from := h.portal("front").outside_pos
+		for f in h.furn:
+			var path: PackedVector3Array = main.street.path(from, f.pos)
+			var end: Vector3 = path[path.size() - 1] if path.size() > 0 else from
+			end.y = 0.0
+			t.check(end.distance_to(f.pos) < 2.0, "%s house (plan %d wide): cannot walk to the %s, stops %.1f m short" % [h.family, h.tpl.w, f.kind, end.distance_to(f.pos)])
+		for r: Array in h.tpl.rooms:
+			var target := h.room_pos(r[0])
+			var path: PackedVector3Array = main.street.path(from, target)
+			var end: Vector3 = path[path.size() - 1] if path.size() > 0 else from
+			end.y = 0.0
+			t.check(end.distance_to(target) < 1.5, "%s house: cannot walk into the %s" % [h.family, r[0]])
+
+
 func test_2_walking_out_and_back() -> void:
 	await _world()
 	var who: Neighbour

@@ -165,7 +165,7 @@ func _process(delta: float) -> void:
 		return
 	var mins := delta / Clock.SEC_PER_MIN * Clock.rate
 	Game.hunger = minf(100.0, Game.hunger + mins * 100.0 / (22.0 * 60.0))
-	Game.fatigue = minf(100.0, Game.fatigue + mins * 100.0 / (19.0 * 60.0))
+	Game.fatigue = minf(100.0, Game.fatigue + mins * 100.0 / (26.0 * 60.0))
 	if Game.hunger >= 100.0:
 		Game.fatigue = minf(100.0, Game.fatigue + mins * 0.15)   # running on empty
 	if Game.fatigue >= 100.0 and not main.shift.active and Game.ended == "":
