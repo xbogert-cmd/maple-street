@@ -94,3 +94,21 @@ Ideas saved for later and new ones to choose from are in `docs/ideas.md`.
 - Driving the car on the street. The car is a trunk, a way to dump a body and a way to leave.
 - Per-room hiding of furniture: a house between you and the camera is shown cut away, people
   inside stay hidden unless you have a line of sight.
+
+## First play feedback (2026-10-09)
+
+The owner played and reported eight things. All are changed; none of the sound has been listened to.
+
+| Report | Change |
+|---|---|
+| Doorframes not door shaped | In the cutaway, frames and doors stay full height and the wall above them is hidden |
+| People very blocky | New figure: round head, tapered torso, limbs with knees and elbows |
+| Grabbing things through walls | Furniture and people need a clear line (no wall or closed door) to be in reach. Test added |
+| Walking does not sound like walking | Footfalls are timed to the legs, with different sounds on boards, pavement and grass. Door, paper and hit sounds redone |
+| Knock-out and kill need an animation | Wind-up and strike; the victim topples over. Killing kneels over the body |
+| Quest directives in a top corner | "TO DO" list top right: work, current order, eat, sleep, Bureau warning |
+| Carrying needs an animation | Body lies across the shoulders with limbs hanging; arms up to hold it |
+| Repetitive bird sounds | The loop is gone. Five different calls play one at a time at random gaps, busy at dawn, sparse later |
+
+Also: sneaking is now a real crouch, and any hands-on action (lock, search, mop) has a working pose.
+Captures: `docs/shots/doorways.png`, `people.png`, `takedown.png`, `kill.png`, `carry.png`.

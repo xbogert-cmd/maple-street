@@ -385,8 +385,7 @@ func knock_out() -> void:
 	state = "ko"
 	Sfx.play("thud", global_position)
 	speed = 1.5
-	figure.set_down(true)
-	figure.position.y = 0.2
+	figure.set_down(true, true)
 	ko_until = Clock.minutes + KO_MINUTES
 	notice = 0.0
 	_bubble.text = ""

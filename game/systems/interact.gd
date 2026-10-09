@@ -11,12 +11,25 @@ var options: Array[Dictionary] = []  # {key, label, time, act, noise, radius, do
 var busy: Dictionary = {}            # the action in progress, with "left" seconds
 var _noise_t := 0.0
 var _chatted: Dictionary = {}        # "id|day"
+var _slung: Neighbour                # whoever is drawn across the player's shoulders
 
 
 func _process(delta: float) -> void:
 	var p: Player = main.player
-	if p.carrying:
-		p.carrying.global_position = p.global_position + Vector3(0, 1.1, 0)
+	if p.carrying != _slung:
+		if _slung:
+			_slung.figure.set_slung(false)
+		_slung = p.carrying
+		if _slung:
+			_slung.figure.set_slung(true)
+	if _slung:
+		# face down across the shoulders, head to one side
+		var yaw := p.figure.rotation.y
+		_slung.figure.rotation.y = yaw + PI * 0.5
+		_slung.global_position = p.global_position + Vector3(0, 1.52, 0) - Vector3(cos(yaw), 0, -sin(yaw)) * 1.0 - Vector3(sin(yaw), 0, cos(yaw)) * 0.14
+	p.figure.action = String(busy.get("anim", "")) if not busy.is_empty() else ("carry" if _slung else "")
+	if not busy.is_empty():
+		p.figure.progress = 1.0 - float(busy.left) / float(busy.total)
 	if Game.ended != "" or main.hud.modal():
 		options = []
 		_cancel()
@@ -67,12 +80,22 @@ func run(o: Dictionary) -> void:
 	busy = o.duplicate()
 	busy.left = o.time * (1.5 if Game.fatigue > 80.0 else 1.0)
 	busy.total = busy.left
+	if o.has("face"):
+		var to: Vector3 = o.face - main.player.global_position
+		main.player.figure.rotation.y = atan2(to.x, to.z)
 	act = o.act
 	_noise_t = 0.3
 
 
 func _opt(label: String, done: Callable, time := 0.0, how := "", noise := "", radius := 0.0, violent := false) -> Dictionary:
-	return {"key": "F" if violent else "", "label": label, "time": time, "act": how, "noise": noise, "radius": radius, "done": done}
+	var anim := "strike" if violent else ("work" if time > 0.0 and how != "" else "")
+	return {"key": "F" if violent else "", "label": label, "time": time, "act": how, "noise": noise, "radius": radius, "done": done, "anim": anim}
+
+
+## Nothing solid (wall or closed door) between the player and `target`.
+func _clear(pos: Vector3, target: Vector3) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(pos + Vector3.UP, Vector3(target.x, 1.0, target.z), Build.L_WALL | Build.L_DOOR)
+	return main.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
 
 
 func _build() -> Array[Dictionary]:
@@ -92,8 +115,9 @@ func _build() -> Array[Dictionary]:
 	# people
 	for n: Neighbour in main.neighbours:
 		var dist := n.global_position.distance_to(pos)
-		if not n.visible or dist > 1.6 or n.hidden_body:
+		if not n.visible or dist > 1.6 or n.hidden_body or not _clear(pos, n.global_position):
 			continue
+		var first := found.size()
 		if n.is_out_cold():
 			found.append([dist, _opt("Carry %s" % n.d.first, func() -> void: _carry(n))])
 			if n.state == "ko":
@@ -108,6 +132,10 @@ func _build() -> Array[Dictionary]:
 						found.append([dist + 0.01, _opt("Lean on %s" % n.d.first, func() -> void: _lean(n), 4.0)])
 				var quiet: bool = p.sneaking and n.facing().dot((pos - n.global_position).normalized()) < 0.0
 				found.append([dist, _opt("Knock %s out%s" % [n.d.first, " quietly" if quiet else " (they will see your face)"], func() -> void: _takedown(n, quiet), 0.8, "attack", "" if quiet else "struggle", 12.0, true)])
+		for i in range(first, found.size()):
+			found[i][1].face = n.global_position - n.facing() * 1.2 if n.is_out_cold() else n.global_position
+			if String(found[i][1].label).begins_with("Kill"):
+				found[i][1].anim = "smother"
 	# doors and windows
 	for h in st.houses:
 		if absf(h.global_position.x - pos.x) > 40.0:
@@ -116,6 +144,7 @@ func _build() -> Array[Dictionary]:
 			var dist := pt.global_position.distance_to(pos)
 			if dist < 1.5:
 				for o in _portal(pt, h, pos):
+					o.face = pt.global_position
 					found.append([dist, o])
 	# containers and furniture
 	var here := st.house_at(pos)
@@ -125,8 +154,9 @@ func _build() -> Array[Dictionary]:
 	for f in list:
 		var dist: float = (f.pos as Vector3).distance_to(pos)
 		var reach: float = 1.7 + maxf(f.size.x, f.size.z) * 0.3
-		if dist < reach:
+		if dist < reach and _clear(pos, f.pos):
 			for o in _furniture(f, here):
+				o.face = f.pos
 				found.append([dist, o])
 	# places
 	if pos.distance_to(st.bus_stop) < 2.6:
@@ -372,6 +402,7 @@ func _takedown(n: Neighbour, quiet: bool) -> void:
 	if not quiet:
 		n.recognised = true
 		Game.noise.emit(n.global_position, 12.0, "struggle")
+	Sfx.play("hit", n.global_position)
 	n.knock_out()
 	Game.say("%s goes down%s." % [n.d.first, " without a sound" if quiet else " after a struggle. They saw your face"])
 

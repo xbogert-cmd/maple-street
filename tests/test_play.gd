@@ -44,11 +44,11 @@ func _go(pos: Vector3) -> void:
 		await t.get_tree().physics_frame
 
 
-## A spot beside a piece of furniture, on the side facing the middle of its house.
+## A spot in front of a piece of furniture, in the same room (you cannot reach through walls).
 func _by(f: Dictionary, h: House) -> Vector3:
-	var centre := h.to_global(Vector3(h.tpl.w * 0.5, 0, h.tpl.d * 0.5))
 	var p: Vector3 = f.pos
-	return p + (centre - p).normalized() * 1.0
+	var front: Vector3 = f.front
+	return p + (h.global_basis * front).normalized() * (0.6 + minf(f.size.x, f.size.z) * 0.5)
 
 
 func _empty_house(h: House) -> void:
@@ -277,3 +277,21 @@ func test_5_search_scramble() -> void:
 	t.check(Game.ended == "arrested", "film in your pocket does not")
 	Engine.time_scale = 1.0
 	Save.wipe()
+
+
+func test_6_no_reaching_through_walls() -> void:
+	await _world()
+	var home: House = main.street.home
+	Game.ended = ""
+	main.law.blown = false
+	main.hud.close()
+	var bed: Dictionary = home.find_furn("counter")
+	await _go(_by(bed, home))
+	for i in 3:
+		await t.get_tree().process_frame
+	t.check(_labels().has("Burn evidence in the sink"), "sink in reach from inside the kitchen (have %s)" % [_labels()])
+	var front: Vector3 = bed.front
+	await _go(bed.pos - (home.global_basis * front).normalized() * (0.6 + minf(bed.size.x, bed.size.z) * 0.5))
+	for i in 3:
+		await t.get_tree().process_frame
+	t.check(not _labels().has("Burn evidence in the sink"), "sink out of reach from behind its wall (have %s)" % [_labels()])

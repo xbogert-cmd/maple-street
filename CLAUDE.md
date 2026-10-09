@@ -37,7 +37,8 @@ tools/dev/check.sh                         # import, load every script, run all 
 tools/dev/run.sh /tmp/x.log 60 --path . -- --seed=7 --demo=look --shots=/tmp/shots
 godot --headless --path . --script tools/gen_icon.gd   # regenerate icon.png
 ```
-- Demos (`game/core/demo.gd`): `look`, `ui`, `scenes`, `walk`, `title`. Other dev switches:
+- Demos (`game/core/demo.gd`): `look`, `ui`, `scenes`, `walk`, `title`, `acts` (people close up,
+  doorways, takedown, kill and carry poses). Other dev switches:
   `-- --seed=N --hour=22 --at=x,z --zoom=40 --shot=/path.png`.
 - New `class_name`s are not visible until `godot --headless --path . --import` runs (check.sh does it).
 - GDScript: annotate types (`var x: bool = ...`) wherever a value comes out of a Dictionary or an
@@ -59,6 +60,10 @@ godot --headless --path . --script tools/gen_icon.gd   # regenerate icon.png
   greyscale textures (`Build.texture`) that the material colour tints. No image files.
 - Use `Build.box/cyl/leaf` so meshes and materials are shared; do not create a new material per
   object. Decorative pieces get no collider, so they cannot change the navmesh.
+- People are jointed (`Figure`: hips, knees, shoulders, elbows) and posed by `Figure.action`
+  (`work`, `strike`, `smother`, `carry`), which `Interact` sets from the running action's `anim`.
+- In the cutaway, walls squash (`House._vis`) but door frames and doors stay full height
+  (`_frames`) and the wall above doorways is hidden (`_tops`).
 - Volumetric fog does not work with the orthographic camera (it blacks the scene out). Lamp cones
   are additive meshes instead (`Street._shaft`).
 - Ideas the owner has parked, and candidates for next: `docs/ideas.md`. Do not build from that

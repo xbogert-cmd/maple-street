@@ -77,6 +77,22 @@ static func cyl(parent: Node, radius: float, height: float, pos: Vector3, color:
 	return _place(parent, mesh, pos)
 
 
+## A low-poly ball or egg (heads, hands, shoulders). `half` gives a dome sitting on its base.
+static func ball(parent: Node, radius: float, height: float, pos: Vector3, color: Color, half := false) -> MeshInstance3D:
+	var key := "s|%.3f|%.3f|%s|%s" % [radius, height, half, color.to_html()]
+	var mesh: SphereMesh = _meshes.get(key)
+	if mesh == null:
+		mesh = SphereMesh.new()
+		mesh.radius = radius
+		mesh.height = height
+		mesh.is_hemisphere = half
+		mesh.radial_segments = 10
+		mesh.rings = 3 if half else 6
+		mesh.material = mat(color)
+		_meshes[key] = mesh
+	return _place(parent, mesh, pos)
+
+
 ## Faceted foliage: a cone (top 0) or a blob, lit per face, swaying a little in the wind.
 static func leaf(parent: Node, radius: float, height: float, pos: Vector3, color: Color, cone := true) -> MeshInstance3D:
 	var key := "l|%.2f|%.2f|%s" % [radius, height, cone]

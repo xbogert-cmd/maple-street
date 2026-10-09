@@ -58,7 +58,10 @@ func _ready() -> void:
 	tr.custom_minimum_size.x = 380
 	_mood = _label(tr, 18, INK)
 	_mood.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_objective = _label(tr, 15, DIM)
+	var head := _label(tr, 13, DIM)
+	head.text = "\nTO DO"
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_objective = _label(tr, 16, INK)
 	_objective.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -192,12 +195,8 @@ func _process(_delta: float) -> void:
 	_eye.add_theme_color_override("font_color", BAD if alarm else WARN)
 	_mood.text = "Street: %s" % Game.mood()
 	_mood.add_theme_color_override("font_color", INK if Game.heat < Rules.HEAT_INVESTIGATOR else (WARN if Game.heat < Rules.HEAT_SEARCH else BAD))
-	var obj: String = main.missions.objective()
-	if main.law.blown:
-		obj = "They know. Reach the bus stop and leave town"
-	if main.law.scramble >= 0.0:
-		obj = "SEARCH IN %d SECONDS. Hide or burn everything" % int(main.law.scramble)
-	_objective.text = obj
+	_objective.text = "\n".join(_todo())
+	_objective.add_theme_color_override("font_color", BAD if main.law.blown or main.law.scramble >= 0.0 else INK)
 	_rain.color.a = main.life.rain * 0.12
 	# prompts
 	var it: Interact = main.interact
@@ -217,6 +216,31 @@ func _process(_delta: float) -> void:
 		_bar.value = 100.0 * (1.0 - it.busy.left / it.busy.total)
 		(_prompts.get_child(0) as Label).visible = true
 		(_prompts.get_child(0) as Label).text = it.busy.label + "…  (move to stop)"
+
+
+## What to do next, most pressing first: shown top right all day.
+func _todo() -> Array[String]:
+	if main.law.scramble >= 0.0:
+		return ["SEARCH IN %d SECONDS. Hide or burn everything" % int(main.law.scramble)]
+	if main.law.blown:
+		return ["They know. Reach the bus stop and leave town"]
+	if main.shift.active:
+		return [main.shift.objective()]
+	var out: Array[String] = []
+	var h := Clock.hour()
+	if not Clock.is_weekend() and not Game.worked_today and not Game.fired:
+		if h < 6.5:
+			out.append("Work today: the plant bus runs 6:30 to 10 AM")
+		elif h < 10.0:
+			out.append("Catch the plant bus at the west end before 10 AM")
+	out.append(main.missions.objective())
+	if Game.hunger > 60.0:
+		out.append("Eat: your fridge, or Miller's Market")
+	if Game.fatigue > 60.0:
+		out.append("Sleep in your bed (this saves the game)")
+	if main.law.investigator.visible:
+		out.append("A Bureau man is on the street. Give him nothing")
+	return out
 
 
 func _toast(text: String) -> void:

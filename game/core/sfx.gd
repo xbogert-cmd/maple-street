@@ -9,7 +9,10 @@ var _pool: Array[AudioStreamPlayer] = []
 var _next := 0
 var _rain: AudioStreamPlayer
 var _night: AudioStreamPlayer
-var _birds: AudioStreamPlayer
+var _bird: AudioStreamPlayer        # one bird call at a time, at random intervals
+var _calls: Array[AudioStreamWAV] = []
+var _bird_wait := 3.0
+var _indoors := false
 var _wind: AudioStreamPlayer
 var _pad: AudioStreamPlayer
 var _tense: AudioStreamPlayer
@@ -21,14 +24,19 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	_rng.seed = 1984
 	_streams = {
-		"step": _wav(_noise(0.05, 0.25, 30.0, 0.25)),
+		# footsteps: a heel knock on boards, a sharper tap on pavement, a soft brush through grass
+		"step_wood": _wav(_join([_mix(_tone(92.0, 0.07, 0.5, 45.0), _noise(0.03, 0.3, 90.0, 0.5)), _silence(0.03), _noise(0.03, 0.1, 80.0, 0.4)])),
+		"step_hard": _wav(_join([_mix(_tone(170.0, 0.035, 0.22, 80.0), _noise(0.03, 0.4, 90.0, 0.8)), _silence(0.035), _noise(0.025, 0.14, 90.0, 0.7)])),
+		"step_grass": _wav(_soft(_noise(0.14, 0.3, 16.0, 0.3), 0.025)),
+		"hit": _wav(_mix(_tone(130.0, 0.1, 0.7, 30.0), _noise(0.06, 0.6, 55.0, 0.45))),
 		"pick": _wav(_mix(_tone(2600.0, 0.03, 0.2, 90.0), _noise(0.03, 0.15, 80.0, 0.9))),
-		"door": _wav(_mix(_tone(110.0, 0.18, 0.5, 18.0), _noise(0.12, 0.25, 25.0, 0.3))),
+		# hinge creak, latch click, then the door meeting its frame
+		"door": _wav(_join([_creak(), _mix(_tone(1700.0, 0.02, 0.2, 120.0), _noise(0.02, 0.3, 120.0, 0.9)), _silence(0.04), _mix(_tone(85.0, 0.16, 0.5, 22.0), _noise(0.08, 0.2, 35.0, 0.25))])),
 		"bark": _wav(_join([_bark(), _silence(0.07), _bark()])),
 		"alarm": _wav(_join([_tone(880.0, 0.12, 0.35, 6.0), _tone(660.0, 0.25, 0.35, 5.0)])),
 		"notice": _wav(_tone(520.0, 0.09, 0.2, 14.0)),
 		"shutter": _wav(_join([_noise(0.02, 0.5, 60.0, 1.0), _silence(0.05), _noise(0.03, 0.4, 50.0, 0.8)])),
-		"note": _wav(_noise(0.06, 0.12, 40.0, 0.6)),
+		"note": _wav(_rustle()),
 		"static": _wav(_static()),
 		"siren": _wav(_siren()),
 		"thud": _wav(_mix(_tone(70.0, 0.25, 0.7, 12.0), _noise(0.1, 0.3, 30.0, 0.2))),
@@ -41,7 +49,9 @@ func _ready() -> void:
 		_pool.append(p)
 	_rain = _loop(_noise(1.5, 0.22, 0.0, 0.35))
 	_night = _loop(_crickets())
-	_birds = _loop(_birdsong())
+	_bird = AudioStreamPlayer.new()
+	add_child(_bird)
+	_calls = [_wav(_chirps(3, 3100.0)), _wav(_chirps(2, 2500.0)), _wav(_chirps(9, 3600.0)), _wav(_whistle_call()), _wav(_coo())]
 	_wind = _loop(_windy())
 	_pad = _loop(_chords([110.0, 130.81, 164.81], [98.0, 123.47, 146.83]))
 	_tense = _loop(_chords([55.0, 58.27, 82.41], [55.0, 61.74, 77.78]))
@@ -62,11 +72,27 @@ func play(sound: String, at: Variant = null, volume_db := 0.0) -> void:
 	p.play()
 
 
+## A footfall for the player: boards indoors, pavement on the road and sidewalk, grass elsewhere.
+func step(paved: bool, volume_db: float) -> void:
+	play("step_wood" if _indoors else ("step_hard" if paved else "step_grass"), null, volume_db + (0.0 if _indoors or paved else 4.0))
+
+
 ## Called every frame with how hard it is raining (0..1) and how dark it is (0..1).
 func ambience(rain: float, night: float, indoors: bool) -> void:
 	_fade(_rain, rain, -10.0 - (8.0 if indoors else 0.0))
 	_fade(_night, night * (1.0 - rain) * (0.0 if indoors else 1.0), -20.0)
-	_fade(_birds, (1.0 - night) * (1.0 - rain) * (0.35 if indoors else 1.0), -19.0)
+	_indoors = indoors
+	# birds: single calls at random, busy at dawn and sparse by afternoon
+	_bird_wait -= get_process_delta_time()
+	if _bird_wait <= 0.0:
+		var h := Clock.hour()
+		var dawn := h >= 5.0 and h < 9.0
+		_bird_wait = _rng.randf_range(1.5, 5.0) if dawn else _rng.randf_range(6.0, 16.0)
+		if night < 0.6 and rain < 0.3:
+			_bird.stream = _calls[_rng.randi() % _calls.size()]
+			_bird.pitch_scale = _rng.randf_range(0.85, 1.2)
+			_bird.volume_db = _rng.randf_range(-32.0, -23.0) - (9.0 if indoors else 0.0)
+			_bird.play()
 	_fade(_wind, 0.5 + rain * 0.5, -24.0 - (6.0 if indoors else 0.0))
 	_tension_now = move_toward(_tension_now, tension, 0.01)
 	_fade(_pad, night * (1.0 - _tension_now), -21.0)
@@ -180,24 +206,79 @@ func _siren() -> PackedFloat32Array:
 	return out
 
 
-## Sparse two- and three-note chirps over six seconds.
-func _birdsong() -> PackedFloat32Array:
+## `notes` quick rising chirps (three is a sparrow, nine is a trill).
+func _chirps(notes: int, base: float) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
-	out.resize(int(6.0 * RATE))
-	for k in 9:
-		var at := _rng.randf_range(0.1, 5.5)
-		var base := _rng.randf_range(2400.0, 3800.0)
-		for note in _rng.randi_range(2, 4):
-			var start := int((at + note * 0.11) * RATE)
-			var ph := 0.0
-			var n := int(0.07 * RATE)
-			for i in n:
-				if start + i >= out.size():
-					break
-				var t := float(i) / n
-				ph += TAU * (base + 500.0 * sin(t * PI) + note * 180.0) / RATE
-				out[start + i] += sin(ph) * 0.1 * sin(t * PI)
+	var gap := 0.11 if notes < 5 else 0.06
+	out.resize(int((notes * gap + 0.1) * RATE))
+	for note in notes:
+		var start := int(note * gap * RATE)
+		var ph := 0.0
+		var n := int(minf(gap * 0.7, 0.07) * RATE)
+		for i in n:
+			var t := float(i) / n
+			ph += TAU * (base + 500.0 * sin(t * PI) + (note % 3) * 180.0) / RATE
+			out[start + i] += sin(ph) * 0.1 * sin(t * PI)
 	return out
+
+
+## Two long falling notes, like a chickadee.
+func _whistle_call() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for f: float in [3300.0, 2750.0]:
+		var n := int(0.3 * RATE)
+		var ph := 0.0
+		for i in n:
+			var t := float(i) / n
+			ph += TAU * (f - 120.0 * t) / RATE
+			out.append(sin(ph) * 0.08 * sin(t * PI))
+		out.append_array(_silence(0.08))
+	return out
+
+
+## A mourning dove: coo-COOO, coo, coo.
+func _coo() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for part: Array in [[0.18, 470.0], [0.5, 560.0], [0.3, 470.0], [0.3, 470.0]]:
+		var n := int(float(part[0]) * RATE)
+		var ph := 0.0
+		for i in n:
+			var t := float(i) / n
+			ph += TAU * (float(part[1]) - 40.0 * t) / RATE
+			out.append((sin(ph) + 0.3 * sin(ph * 2.0)) * 0.09 * sin(t * PI))
+		out.append_array(_silence(0.12))
+	return out
+
+
+## A dry hinge: a quiet, wavering rasp that rises as the door swings.
+func _creak() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(int(0.24 * RATE))
+	var ph := 0.0
+	for i in out.size():
+		var t := float(i) / out.size()
+		ph += (230.0 + 170.0 * t + 25.0 * sin(t * 60.0)) / RATE
+		out[i] = (fmod(ph, 1.0) * 2.0 - 1.0) * 0.05 * sin(t * PI)
+	return out
+
+
+## Paper: a crackle of short bright bursts.
+func _rustle() -> PackedFloat32Array:
+	var out := _noise(0.28, 0.3, 5.0, 0.85)
+	var gate := 0.0
+	for i in out.size():
+		if i % 180 == 0:
+			gate = _rng.randf()
+		out[i] *= gate * gate * sin(PI * float(i) / out.size())
+	return out
+
+
+## Fade the start in over `secs`, for sounds with no hard edge.
+func _soft(samples: PackedFloat32Array, secs: float) -> PackedFloat32Array:
+	var n := int(secs * RATE)
+	for i in mini(n, samples.size()):
+		samples[i] *= float(i) / n
+	return samples
 
 
 ## Slow breathing hiss.
@@ -230,9 +311,10 @@ func _chords(first: Array, second: Array) -> PackedFloat32Array:
 
 func _crickets() -> PackedFloat32Array:
 	var out := PackedFloat32Array()
-	out.resize(int(2.0 * RATE))
+	out.resize(int(6.0 * RATE))
 	for i in out.size():
 		var t := float(i) / RATE
-		var chirp := maxf(0.0, sin(TAU * 3.0 * t)) * maxf(0.0, sin(TAU * 34.0 * t))
-		out[i] = sin(TAU * 4100.0 * t) * chirp * 0.1
+		var near := maxf(0.0, sin(TAU * 3.0 * t)) * maxf(0.0, sin(TAU * 34.0 * t)) * (0.6 + 0.4 * sin(TAU * t / 6.0))
+		var far := maxf(0.0, sin(TAU * 2.5 * t + 1.0)) * maxf(0.0, sin(TAU * 29.0 * t)) * maxf(0.0, sin(TAU * t / 3.0))
+		out[i] = sin(TAU * 4100.0 * t) * near * 0.09 + sin(TAU * 3650.0 * t) * far * 0.05
 	return out

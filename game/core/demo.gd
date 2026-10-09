@@ -269,3 +269,58 @@ func plans() -> void:
 		await at(13.0, h.to_global(Vector3(h.tpl.w * 0.5, 0, h.tpl.d * 0.5)), 13.0)
 		await shot("plan_%d" % key, 0.8)
 	get_tree().quit()
+
+
+## People up close, doorways in the cutaway, and the takedown, kill and carry poses: --demo=acts
+func acts() -> void:
+	var home: House = main.street.home
+	await at(14.0, home.room_pos("hall"), 9.0)
+	main.player.figure.rotation.y = PI * 0.25
+	await shot("1_doorways")
+	var spot := Vector3(60, 0, 0)
+	await at(10.0, spot, 6.5)
+	Clock.running = false
+	main.player.figure.rotation.y = PI * 0.25
+	var shown: Array[Neighbour] = []
+	for n: Neighbour in main.neighbours:
+		if shown.size() < 6:
+			n.stop()
+			n.visible = true
+			n.state = "event"
+			n.global_position = spot + Vector3(-3.6 + shown.size() * 1.2, 0, 3.6 - shown.size() * 1.2) + Vector3(-1.2, 0, -1.2)
+			n.figure.rotation.y = PI * 0.25
+			shown.append(n)
+	await shot("2_people")
+	var victim := shown[2]
+	for n in shown:
+		if n != victim:
+			n.visible = false
+	await go(spot)
+	victim.global_position = spot + Vector3(0.9, 0, -0.5)
+	main.player.sneaking = true
+	await _begin("Knock")
+	await shot("3_strike_windup", 0.35)
+	await shot("4_strike_lands", 0.6)
+	main.player.sneaking = false
+	await _begin("Kill")
+	await shot("5_kill", 1.5)
+	while not main.interact.busy.is_empty():
+		await get_tree().process_frame
+	await press("Carry")
+	await shot("6_carry", 0.5)
+	main.player.figure.rotation.y = -PI * 0.25
+	await shot("7_carry_side", 0.3)
+	main.player.sneaking = true
+	await press("Put")
+	await shot("8_sneak", 0.5)
+	get_tree().quit()
+
+
+func _begin(label: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for o: Dictionary in main.interact.options:
+		if String(o.label).begins_with(label):
+			main.interact.run(o)
+			return
+	print("DEMO no prompt '%s'" % label)

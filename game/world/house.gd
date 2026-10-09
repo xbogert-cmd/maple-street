@@ -27,6 +27,8 @@ var accent := Color("5c3a26")         # front door and shutters
 var lit := false
 
 var _vis: Node3D      # walls and windows; squashed when the player is inside
+var _frames: Node3D   # door frames and doors: stay full height in the cutaway
+var _tops: Node3D     # wall above doorways: hidden in the cutaway
 var _roof: Node3D
 var _lamp: OmniLight3D
 var _porch: OmniLight3D
@@ -44,6 +46,10 @@ func build() -> void:
 	add_child(_vis)
 	_roof = Node3D.new()
 	add_child(_roof)
+	_frames = Node3D.new()
+	add_child(_frames)
+	_tops = Node3D.new()
+	add_child(_tops)
 	var w: int = tpl.w
 	var d: int = tpl.d
 	for r: Array in tpl.rooms:
@@ -160,10 +166,11 @@ func _opening(key: Vector3i, kind: int, tag: String) -> void:
 	var across := Vector3(0, 0, 1) if h else Vector3(1, 0, 0)
 	var span := func(length: float, height: float, thick: float) -> Vector3: return along * length + Vector3.UP * height + across * thick
 	# lintel over every opening
-	Build.box(_vis, span.call(1.0, 0.6, WALL_T), mid + Vector3.UP * 2.4, wall_color, "siding")
+	Build.box(_vis if kind == WINDOW else _tops, span.call(1.0, 0.6, WALL_T), mid + Vector3.UP * 2.4, wall_color, "siding")
 	if kind == OPENING:
 		for s: float in [-0.5, 0.5]:
-			Build.box(_vis, span.call(0.06, 2.1, WALL_T + 0.04), mid + along * s + Vector3.UP * 1.05, TRIM)
+			Build.box(_frames, span.call(0.07, 2.1, WALL_T + 0.06), mid + along * s + Vector3.UP * 1.05, TRIM)
+		Build.box(_frames, span.call(1.07, 0.08, WALL_T + 0.06), mid + Vector3.UP * 2.14, TRIM)
 		return
 	var p := Portal.new()
 	p.house = self
@@ -198,14 +205,14 @@ func _opening(key: Vector3i, kind: int, tag: String) -> void:
 		var color := accent if front else Color("8a8478")
 		p.leaf = Node3D.new()
 		p.leaf.position = mid - along * 0.5
-		_vis.add_child(p.leaf)
+		_frames.add_child(p.leaf)
 		Build.box(p.leaf, span.call(0.92, 2.1, 0.07), along * 0.5 + Vector3.UP * 1.05, color)
 		for py: float in [0.6, 1.5]:
 			Build.box(p.leaf, span.call(0.6, 0.6, 0.09), along * 0.5 + Vector3.UP * py, color.darkened(0.12))
 		for s: float in [-1.0, 1.0]:
 			Build.box(p.leaf, Vector3(0.07, 0.07, 0.07), along * 0.82 + across * s * 0.07 + Vector3.UP * 1.0, Color("c9a44a"))
-			Build.box(_vis, span.call(0.07, 2.16, WALL_T + 0.06), mid + along * s * 0.5 + Vector3.UP * 1.08, TRIM)
-		Build.box(_vis, span.call(1.14, 0.08, WALL_T + 0.06), mid + Vector3.UP * 2.14, TRIM)
+			Build.box(_frames, span.call(0.07, 2.16, WALL_T + 0.06), mid + along * s * 0.5 + Vector3.UP * 1.08, TRIM)
+		Build.box(_frames, span.call(1.14, 0.08, WALL_T + 0.06), mid + Vector3.UP * 2.14, TRIM)
 		p.body = Build.solid(self, span.call(1.0, 2.1, WALL_T), mid + Vector3.UP * 1.05, Build.L_DOOR)
 		if not plain:
 			# step, and for the front door a small porch with a light
@@ -341,6 +348,7 @@ func set_cutaway(on: bool) -> void:
 		return
 	_cut = on
 	_roof.visible = not on
+	_tops.visible = not on
 	_vis.scale.y = 0.3 if on else 1.0
 
 

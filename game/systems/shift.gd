@@ -51,6 +51,10 @@ func start() -> void:
 	Game.say("Nine o'clock. Six spills on the floor sheet. Mop them, then clock out in the closet.")
 
 
+func objective() -> String:
+	return "Mop the spills on the plant floor (%d left)" % _left if _left > 0 else "Clock out in the janitor's closet"
+
+
 func options(pos: Vector3) -> Array:
 	var it: Interact = main.interact
 	var found: Array = []
@@ -58,6 +62,8 @@ func options(pos: Vector3) -> Array:
 	for s in spills:
 		if s.visible and s.global_position.distance_to(pos) < 1.4:
 			found.append([0.1, it._opt("Mop the spill", func() -> void: _mopped(s), 2.0)])
+			found[-1][1].anim = "work"
+			found[-1][1].face = s.global_position
 	for f in plant.furn:
 		if f.name == "" or (f.pos as Vector3).distance_to(pos) > 1.6:
 			continue
