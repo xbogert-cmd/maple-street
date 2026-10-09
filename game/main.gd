@@ -82,6 +82,7 @@ func _people() -> void:
 				n.car = street.cars[h.lot]
 			first = false
 			n.raised_alarm.connect(func(who: Neighbour) -> void: law.report(who))
+			n.saw_everything.connect(func(who: Neighbour) -> void: law.agent_saw(who))
 			street.houses[h.lot].residents.append(n)
 			neighbours.append(n)
 	var rng := RandomNumberGenerator.new()
@@ -113,6 +114,7 @@ func _process(delta: float) -> void:
 	if _tick <= 0.0:
 		_tick = 0.5
 		_households()
+		_fog()
 		Game.heat = Rules.heat(suspicions(), Game.incident)
 
 
@@ -136,14 +138,19 @@ func _frame(delta: float) -> void:
 	var target := player.position + Vector3.UP * 1.0
 	cam.position = cam.position.lerp(target + cam.basis.z * 150.0, minf(1.0, delta * 6.0))
 	player.cam_yaw = CAM_YAW
-	# roof off the house the player is in
+	# roof off the house the player is in, and off any house standing between them and the camera
 	var h := street.house_at(player.position)
-	if h != _inside:
-		if _inside:
-			_inside.set_cutaway(false)
-		if h:
-			h.set_cutaway(true)
-		_inside = h
+	var toward_cam := Vector3(cam.basis.z.x, 0, cam.basis.z.z).normalized()
+	var all: Array[House] = street.houses + ([street.plant] as Array[House])
+	for house in all:
+		var cut: bool = house == h or house == street.plant
+		if not cut and absf(house.global_position.x - player.position.x) < 40.0:
+			for k in range(1, 8):
+				if house.footprint(player.position + toward_cam * float(k), 0.6):
+					cut = true
+					break
+		house.set_cutaway(cut)
+	_inside = h
 	_context(h, day)
 
 
@@ -183,11 +190,27 @@ func _context(h: House, day: float) -> void:
 	}
 
 
+## People indoors are only drawn if the player is in that house or has a line of sight to them.
+func _fog() -> void:
+	var eye := player.global_position + Vector3.UP * 1.5
+	var space := get_world_3d().direct_space_state
+	for n in neighbours:
+		if not n.visible:
+			continue
+		var house := street.house_at(n.global_position)
+		var shown := house == null or house == _inside or n.carried
+		if not shown and n.global_position.distance_to(player.global_position) < 20.0:
+			var q := PhysicsRayQueryParameters3D.create(eye, n.global_position + Vector3.UP * 1.2, Build.L_WALL | Build.L_DOOR)
+			shown = space.intersect_ray(q).is_empty()
+		n.figure.visible = shown
+		n.bubble_on = shown
+
+
 func suspicions() -> Array[float]:
 	var out: Array[float] = []
 	for n in neighbours:
 		if n.state != "dead":
-			out.append(n.suspicion)
+			out.append(n.suspicion * (0.4 if n.d.job == "school" else 1.0))
 	return out
 
 
@@ -218,7 +241,7 @@ func _households() -> void:
 		elif not awake and was:
 			# last one out (or to bed) locks up
 			for p in h.portals:
-				if not p.is_window and street.house_at(player.position) != h:
+				if not p.is_window and street.house_at(player.position) != h and life.event_lot != h.index:
 					p.set_open(false)
 					p.locked = true
 		_occupied[h.index] = awake

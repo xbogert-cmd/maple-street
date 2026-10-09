@@ -24,11 +24,51 @@ var rain := 0.0            # 0 dry .. 1 raining
 var rain_from := -1.0      # today's rain, clock hours (-1: none)
 var rain_to := -1.0
 var event_lot := -1        # lot hosting a street event right now (-1: none)
+var event_host := -1       # lot hosting the next or current event
+var event_from := -1.0
+var event_to := -1.0
+var dogs: Array[Dog] = []
+var trunk: Dictionary = {}  # the car boot, shaped like a furniture container
+var body_in_trunk: Neighbour
+var _attended := 0.0
+var _rain_fx: CPUParticles3D
 var _rng := RandomNumberGenerator.new()
+
+
+const FILLER: Array[String] = ["County fair opens Saturday", "Plant wins new Air Force contract", "School board votes on new gymnasium", "Water main work on Elm Street next week", "Bowling league standings inside", "Church bake sale raises record sum", "Hardware store marks forty years"]
 
 
 func _ready() -> void:
 	_rng.seed = Game.run_seed + 2024
+	var st: Street = main.street
+	for h: Dictionary in st.cast.houses:
+		if h.dog:
+			var dog := Dog.new()
+			add_child(dog)
+			dog.setup(st.houses[h.lot], main.player, [Color("7a5a3a"), Color("2e2a26"), Color("c9b48a")][dogs.size() % 3])
+			dog.position = Vector3(Street.lot_x(h.lot) + _rng.randf_range(5.0, 13.0), 0, Street.lot_side(h.lot) * 26.0)
+			dogs.append(dog)
+	trunk = {"kind": "trunk", "name": "Car trunk", "node": null, "pos": Vector3.ZERO, "items": [], "locked": false, "disturbed": false, "house": st.home, "bug": false}
+	_rain_fx = CPUParticles3D.new()
+	_rain_fx.amount = 700
+	_rain_fx.lifetime = 0.7
+	_rain_fx.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	_rain_fx.emission_box_extents = Vector3(22, 0.1, 22)
+	_rain_fx.direction = Vector3(0.15, -1, 0.1)
+	_rain_fx.spread = 2.0
+	_rain_fx.gravity = Vector3.ZERO
+	_rain_fx.initial_velocity_min = 22.0
+	_rain_fx.initial_velocity_max = 26.0
+	var drop := BoxMesh.new()
+	drop.size = Vector3(0.025, 0.7, 0.025)
+	var dm := StandardMaterial3D.new()
+	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dm.albedo_color = Color(0.8, 0.86, 0.95, 0.35)
+	drop.material = dm
+	_rain_fx.mesh = drop
+	_rain_fx.emitting = false
+	add_child(_rain_fx)
 
 
 func new_run() -> void:
@@ -69,10 +109,6 @@ func furnish_home() -> void:
 	for f: Array in home.tpl.home:
 		home.add_furniture(f[0], Vector2(f[1], f[2]), f[3])
 	home.find_furn("radio").node.visible = not Game.radio_hidden
-
-
-func extra_options(_found: Array, _pos: Vector3) -> void:
-	pass
 
 
 func _clue(h: House, kind: String, title: String, n: Neighbour, what: String) -> void:
@@ -119,6 +155,30 @@ func _process(delta: float) -> void:
 	var h := Clock.hour()
 	var want := 1.0 if rain_from >= 0.0 and h >= rain_from and h < rain_to else 0.0
 	rain = move_toward(rain, want, delta * 0.2)
+	_rain_fx.emitting = rain > 0.3
+	_rain_fx.position = main.player.position + Vector3(0, 14, 0)
+	# street event
+	var on := Clock.minutes >= event_from and Clock.minutes < event_to
+	if on and event_lot < 0:
+		Game.say("The barbecue at the %s place has started." % main.street.houses[event_host].family)
+	elif not on and event_lot >= 0:
+		if _attended < 15.0:
+			for n: Neighbour in main.neighbours:
+				if float(n.d.nosy) > 0.5:
+					n.add_suspicion(3.0, "noticed you stayed away from the barbecue")
+		else:
+			for n: Neighbour in main.neighbours:
+				n.suspicion = maxf(0.0, n.suspicion - 4.0)
+			Game.note("You were seen at the barbecue, a neighbour like any other.")
+	event_lot = event_host if on else -1
+	if on and Game.ctx.get("lot", -1) == event_lot:
+		_attended += mins
+	# the counter-agent comes out at night once the street is uneasy
+	for n: Neighbour in main.neighbours:
+		if n.d.agent and n.state != "dead":
+			n.watching = Game.heat >= 18.0
+			var home_lot: int = main.street.cast.home
+			n.watch_spot = Vector3(Street.lot_x(home_lot) + 10.0, 0, -Street.lot_side(home_lot) * 5.0)
 
 
 func eat(it: Dictionary) -> void:
@@ -180,6 +240,10 @@ func new_day() -> void:
 			Game.note("You missed a shift. The foreman will remember. (%d of 3)" % Game.missed_shifts)
 	Game.worked_today = false
 	_weather()
+	_assets()
+	if Clock.weekday() == 5:
+		_plan_event()
+	_paper()
 	main.law.daily()
 
 
@@ -198,3 +262,117 @@ func _weather() -> void:
 
 func heard(_pos: Vector3, _radius: float, _kind: String) -> void:
 	pass
+
+
+## Saturday: one household has the street round at noon.
+func _plan_event() -> void:
+	var hosts: Array[House] = []
+	for h: House in main.street.houses:
+		if h != main.street.home and not h.residents.is_empty() and not (h.residents[0] as Neighbour).d.agent and (h.residents[0] as Neighbour).state != "dead":
+			hosts.append(h)
+	if hosts.is_empty():
+		return
+	var host: House = hosts[_rng.randi() % hosts.size()]
+	event_host = host.index
+	event_from = Clock.minutes + Clock.until(12.0)
+	event_to = event_from + 180.0
+	_attended = 0.0
+	var s := Street.lot_side(host.index)
+	for n: Neighbour in main.neighbours:
+		n.event_from = event_from + _rng.randf_range(0.0, 25.0)
+		n.event_to = event_to - _rng.randf_range(0.0, 30.0)
+		n.event_spot = Vector3(Street.lot_x(host.index) + _rng.randf_range(4.0, 16.0), 0, s * _rng.randf_range(24.0, 30.0))
+	Game.note("The %s family are having the whole street round for a barbecue at noon today." % host.family)
+
+
+## Recruited neighbours bring papers out, and may lose their nerve when the street is hot.
+func _assets() -> void:
+	for n: Neighbour in main.neighbours:
+		if not n.asset or n.state == "dead":
+			continue
+		if Game.heat > 55.0 and _rng.randf() < 0.15:
+			n.asset = false
+			main.law.blown = true
+			main.law.arrive_at = Clock.minutes + 30.0
+			Game.note("%s has lost their nerve and gone to the Bureau. They are coming for you." % n.full_name())
+		elif int(n.d.clearance) > 0:
+			Game.intel += 3 * int(n.d.clearance)
+			Game.note("%s left papers for you. Intelligence +%d." % [n.d.first, 3 * int(n.d.clearance)])
+
+
+## The morning paper lands in your mailbox: yesterday's trouble and today's weather.
+func _paper() -> void:
+	var lines: Array[String] = []
+	var since := "%s " % Clock.DAY_NAMES[(Clock.weekday() + 6) % 7]
+	for j in Game.journal:
+		if j.begins_with(since) and ("police" in j or "missing" in j or "dead" in j or "break-in" in j or "found" in j):
+			lines.append(j.get_slice(" — ", 1))
+	var text := ""
+	if lines.is_empty():
+		text = "[b]%s[/b]\n\n" % FILLER[_rng.randi() % FILLER.size()]
+	else:
+		text = "[b]TROUBLE ON MAPLE STREET[/b]\n%s\n\n" % "\n".join(lines.slice(0, 3))
+	if rain_from >= 0.0:
+		text += "Weather: rain from about %s until %s." % [hhmm(rain_from), hhmm(rain_to)]
+	else:
+		text += "Weather: dry and clear."
+	if Clock.weekday() == 4:
+		text += "\n\nSocial notes: a neighbourhood barbecue is planned for Saturday noon."
+	for c in main.street.outdoor:
+		if c.house == main.street.home and c.kind == "mailbox":
+			for it: Dictionary in c.items.duplicate():
+				if it.id == "paper":
+					c.items.erase(it)
+			c.items.append({"id": "paper", "name": "The Morning Courier", "contraband": false, "text": text})
+
+
+func car() -> Node3D:
+	return main.street.cars[main.street.cast.home]
+
+
+func extra_options(found: Array, pos: Vector3) -> void:
+	var it: Interact = main.interact
+	for dog in dogs:
+		var dist := dog.global_position.distance_to(pos)
+		if dist < 8.0 and Game.has("treat") and Clock.minutes >= dog.quiet_until:
+			found.append([dist * 0.1, it._opt("Throw the dog a biscuit", func() -> void: _feed(dog), 0.6)])
+	var dist := car().global_position.distance_to(pos)
+	if dist < 3.2:
+		found.append([dist, it._opt("Open the car trunk", func() -> void: main.hud.open_container(trunk))])
+		if body_in_trunk:
+			found.append([dist, it._opt("Drive out of town and dump the body", func() -> void: _dump())])
+		else:
+			found.append([dist + 0.1, it._opt("Drive away for good", func() -> void: it._leave())])
+
+
+func body_options(found: Array, pos: Vector3) -> void:
+	if car().global_position.distance_to(pos) < 3.2 and body_in_trunk == null:
+		found.append([0.05, main.interact._opt("Put the body in the trunk", func() -> void: _load_body(), 3.0, "carry_body")])
+
+
+func _feed(dog: Dog) -> void:
+	Game.take("treat")
+	dog.feed()
+
+
+func _load_body() -> void:
+	var n: Neighbour = main.player.carrying
+	main.player.carrying = null
+	n.carried = false
+	n.hidden_body = true
+	n.visible = false
+	if n.state != "dead":
+		n.kill()
+		n.died_at = Clock.minutes
+	body_in_trunk = n
+	Game.note("%s is in the trunk. Do not let anyone look in there." % n.full_name())
+
+
+func _dump() -> void:
+	var h := Clock.hour()
+	if h >= 5.5 and h < 21.5:
+		Game.incident_add(8.0, "You were seen driving out toward the quarry in the middle of the day.")
+	body_in_trunk = null
+	Game.fatigue = minf(100.0, Game.fatigue + 12.0)
+	main.skip(120.0)
+	Game.note("Two hours out and back. The quarry keeps its secrets.")

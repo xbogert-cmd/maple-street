@@ -167,7 +167,14 @@ func _process(_delta: float) -> void:
 	if p.sneaking:
 		bits.append("Sneaking (C)")
 	if main.life.rain > 0.5:
-		bits.append("Raining")
+		bits.append("Raining (sound carries less)")
+	var zone: String = Game.ctx.get("zone", "")
+	if zone == "inside":
+		bits.append("INSIDE THE %s HOUSE" % String(Game.ctx.family).to_upper())
+	elif zone == "yard":
+		bits.append("In the %s yard" % Game.ctx.family)
+	if zone != "home" and Clock.daylight() < 0.5:
+		bits.append("In the light" if float(Game.ctx.get("light", 1.0)) > 0.45 else "In shadow")
 	_needs.text = "   ".join(bits)
 	var worst := 0.0
 	var alarm := false
@@ -341,6 +348,8 @@ func _fill_container(c: Dictionary, mine: bool) -> void:
 					_button(r, "Photograph", func() -> void: main.missions.photographed(), false)
 				else:
 					_row("      (you need the Minox camera)", DIM)
+			if it.id == "paper":
+				_button(r, "Read", open_text.bind("The Morning Courier", it.text, [["Fold it away", Callable()]]), false)
 			if it.id in ["food", "coffee"] and mine:
 				_button(r, "Eat" if it.id == "food" else "Drink", _eat_from.bind(c.items, it), false)
 			_button(r, "Take", _take.bind(c, it), false)

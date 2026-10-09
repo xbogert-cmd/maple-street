@@ -3,6 +3,7 @@ extends Walker
 ## A resident of the street: keeps a daily routine, watches, remembers and reports.
 
 signal raised_alarm(who: Neighbour)
+signal saw_everything(who: Neighbour)   # the counter-agent, who needs no telephone
 
 const KO_MINUTES := 150.0
 
@@ -28,6 +29,10 @@ var found := false               # someone has come across them lying there
 var died_at := -1.0
 var missing_reported := false
 var event_spot := Vector3.ZERO   # where to stand during a street event
+var event_from := -1.0
+var event_to := -1.0
+var watching := false            # counter-agent only: out at night keeping an eye on you
+var watch_spot := Vector3.ZERO
 
 var _seen: Dictionary = {}       # "kind|day" already counted
 var _think := 0.0
@@ -35,6 +40,7 @@ var _next_activity := 0.0
 var _look_at := Vector3.ZERO
 var _look_time := 0.0
 var _bubble: Label3D
+var bubble_on := true
 var _dial := 0.0
 var _rng := RandomNumberGenerator.new()
 
@@ -78,8 +84,12 @@ func plan() -> String:
 	var h := Clock.hour()
 	var sleep_h := fmod(float(d.sleep), 24.0)
 	var asleep: bool = (h >= sleep_h or h < d.wake) if sleep_h > d.wake else (h >= sleep_h and h < d.wake)
+	if watching and (h >= 21.0 or h < 2.0):
+		return "watch"
 	if asleep:
 		return "sleep"
+	if Clock.minutes >= event_from and Clock.minutes < event_to:
+		return "event"
 	if works_today() and h >= leave_at and h < back_at:
 		return "away"
 	return "home"
@@ -90,7 +100,7 @@ func is_away() -> bool:
 
 
 func is_awake() -> bool:
-	return state in ["home", "leaving", "returning", "alarm", "event"]
+	return state in ["home", "leaving", "returning", "alarm", "event", "watch"]
 
 
 func is_out_cold() -> bool:
@@ -117,6 +127,14 @@ func snap() -> void:
 			_set_away(false)
 			global_position = house.find_furn("bed").pos
 			_sleep()
+		"event":
+			_set_away(false)
+			state = "event"
+			global_position = event_spot
+		"watch":
+			_set_away(false)
+			state = "watch"
+			global_position = watch_spot
 		_:
 			_set_away(false)
 			state = "home"
@@ -169,7 +187,7 @@ func _process(delta: float) -> void:
 		_routine()
 		if is_awake():
 			_watch(0.2)
-	_bubble.text = "!" if state == "alarm" else ("?" if notice > 0.05 else "")
+	_bubble.text = "" if not bubble_on else ("!" if state == "alarm" else ("?" if notice > 0.05 else ""))
 	_bubble.modulate = Color("ff5a4a") if state == "alarm" else Color("ffd84a")
 
 
@@ -183,11 +201,23 @@ func _routine() -> void:
 			elif want == "sleep":
 				state = "returning"   # busy walking; not open to new activities
 				go_to(house.find_furn("bed").pos, _sleep)
+			elif want == "event" or want == "watch":
+				state = want
+				go_to(event_spot if want == "event" else watch_spot)
 			elif Clock.minutes >= _next_activity and arrived:
 				_activity()
 		"sleep":
 			if want != "sleep":
 				_wake()
+		"event", "watch":
+			if want != state:
+				walk_home()
+			elif arrived:
+				_look_time = 1.0
+				if state == "watch":
+					_look_at = street.home.portal("front").outside_pos
+				elif _rng.randf() < 0.02:
+					_look_at = event_spot + Vector3(_rng.randf_range(-4, 4), 0, _rng.randf_range(-4, 4))
 		"alarm":
 			if arrived:
 				_dial += 0.2
@@ -195,6 +225,13 @@ func _routine() -> void:
 					state = "home"
 					_dial = 0.0
 					raised_alarm.emit(self)
+
+
+func walk_home() -> void:
+	state = "returning"
+	go_to(house.portal("front").inside_pos, func() -> void:
+		state = "home"
+		_next_activity = Clock.minutes + 5.0)
 
 
 func come_home() -> void:
@@ -212,6 +249,11 @@ func _activity() -> void:
 	var roll := _rng.randf()
 	var day := Clock.daylight() > 0.4
 	var front := house.portal("front")
+	if d.job == "school" and day and roll < 0.7:
+		# out on the sidewalk, up and down the street
+		_next_activity = Clock.minutes + _rng.randf_range(8.0, 20.0)
+		go_to(Vector3(clampf(global_position.x + _rng.randf_range(-35.0, 35.0), 2.0, 118.0), 0, Street.lot_side(house.index) * 5.0))
+		return
 	if roll < float(d.nosy) * 0.6:
 		# stand at a front window or on the porch, looking out
 		var spot := front.outside_pos if (day and _rng.randf() < 0.4) else _front_window()
@@ -254,7 +296,7 @@ func _watch(dt: float) -> void:
 		notice = maxf(0.0, notice - dt * 0.5)
 		return
 	var dist := global_position.distance_to(player.global_position)
-	var rate := clampf(1.5 - dist / 16.0, 0.3, 1.5) * (1.6 if j.severe else 0.8)
+	var rate := clampf(1.5 - dist / 16.0, 0.3, 1.5) * (1.6 if j.severe else 0.8) * (1.5 if d.agent else 1.0)
 	notice = minf(1.0, notice + dt * rate)
 	if state != "alarm" and arrived:
 		face(player.global_position)
@@ -270,7 +312,16 @@ func _witness(j: Dictionary, dist: float, light: float) -> void:
 	if j.severe and state != "alarm":
 		if light > 0.35 or dist < 6.0:
 			recognised = true
-		alarm(j.text)
+		if d.job == "school":
+			# a kid tells their parents; it counts for less, and nobody phones on a child's word alone
+			for r: Neighbour in house.residents:
+				if r != self and r.state != "dead":
+					r.add_suspicion(j.amount * 0.5, "was told by their kid, who %s" % j.text)
+			notice = 0.0
+		elif d.agent and recognised:
+			saw_everything.emit(self)
+		else:
+			alarm(j.text)
 
 
 func add_suspicion(amount: float, text: String) -> void:

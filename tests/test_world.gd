@@ -16,6 +16,23 @@ func _world() -> Node:
 	return main
 
 
+## Undo an arrest from an earlier test so the next one starts from a live game.
+func _calm() -> void:
+	Game.ended = ""
+	Clock.running = true
+	main.law.blown = false
+	main.law.arrive_at = -1.0
+	for o: Walker in main.law.officers:
+		o.queue_free()
+	main.law.officers.clear()
+	main.hud.close()
+	Clock.running = true
+	for n: Neighbour in main.neighbours:
+		if n.state == "alarm":
+			n.state = "home"
+		n.recognised = false
+
+
 func _wait(sec: float) -> void:
 	await t.get_tree().create_timer(sec).timeout
 
@@ -112,8 +129,90 @@ func test_4_caught_inside() -> void:
 	t.check(who.suspicion >= 70.0, "and the neighbour is certain, %d" % who.suspicion)
 
 
+func test_4b_dog() -> void:
+	await _world()
+	_calm()
+	main.law.blown = false
+	Clock.minutes = 7.0 * 1440.0 + 13.0 * 60.0
+	main.skip(0.0)
+	var dog: Dog = main.life.dogs[0]
+	main.player.global_position = dog.global_position + Vector3(3, 0, 0)
+	await _wait(0.5)
+	t.check(dog.barking, "a dog barks at a stranger three metres away")
+	Game.give(Game.item("treat"))
+	main.life._feed(dog)
+	await _wait(0.3)
+	t.check(not dog.barking, "a biscuit quiets it")
+	main.player.global_position = main.street.home.room_pos("living")
+
+
+func test_4c_barbecue() -> void:
+	await _world()
+	_calm()
+	Clock.minutes = 12.0 * 1440.0 + 4.0 * 60.0   # a Saturday, 4 AM
+	t.check(Clock.weekday() == 5, "it is Saturday")
+	main.life.new_day()
+	t.check(main.life.event_host >= 0, "someone is hosting")
+	main.skip(Clock.until(13.0))
+	await _wait(0.3)
+	var there := 0
+	for n: Neighbour in main.neighbours:
+		there += int(n.state == "event" and main.street.lot_at(n.global_position) == main.life.event_host)
+	t.check(there >= 6, "the street is at the barbecue, got %d" % there)
+	t.check(main.life.event_lot == main.life.event_host, "the event is on")
+	var host: House = main.street.houses[main.life.event_host]
+	main.player.global_position = Vector3(Street.lot_x(host.index) + 10.0, 0, Street.lot_side(host.index) * 27.0)
+	await _wait(0.3)
+	t.check(Game.ctx.zone == "yard" and Rules.judge(Game.ctx).is_empty(), "you are welcome in the host's yard")
+	main.player.global_position = main.street.home.room_pos("living")
+	main.skip(Clock.until(20.0))
+
+
+func test_4d_body_and_agent() -> void:
+	await _world()
+	_calm()
+	main.law.blown = false
+	Clock.minutes = 15.0 * 1440.0 + 19.0 * 60.0
+	main.skip(0.0)
+	var a: Neighbour
+	var b: Neighbour
+	for n: Neighbour in main.neighbours:
+		if n.state == "home" and n.d.job != "school" and not n.d.agent:
+			if a == null:
+				a = n
+			elif n.house == a.house:
+				b = n
+	t.check(a != null and b != null, "a couple at home")
+	if a == null or b == null:
+		return
+	a.global_position = b.global_position + b.facing() * 2.0
+	a.knock_out()
+	await _wait(1.0)
+	t.check(a.found and b.state == "alarm", "a body in plain sight is found (found %s, state %s)" % [a.found, b.state])
+	b.knock_out()
+	a.kill()
+	a.died_at = Clock.minutes
+	a.found = false
+	a.hidden_body = true
+	Clock.minutes += 30.0 * 60.0
+	var before := Game.incident
+	main.law.daily()
+	t.check(a.missing_reported and Game.incident > before, "a vanished neighbour is reported missing")
+	var agent: Neighbour
+	for n: Neighbour in main.neighbours:
+		if n.d.agent:
+			agent = n
+	Game.incident = 60.0
+	await _wait(0.8)
+	Clock.minutes = 17.0 * 1440.0 + 22.5 * 60.0
+	await _wait(0.2)
+	t.check(agent.watching and agent.plan() == "watch", "the counter-agent comes out at night when the street is hot")
+	Game.incident = 0.0
+
+
 func test_5_search_and_save() -> void:
 	await _world()
+	_calm()
 	main.law.blown = false
 	Game.radio_hidden = true
 	var stuff: Array = main.law.contraband(false)

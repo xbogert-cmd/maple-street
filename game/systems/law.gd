@@ -85,8 +85,41 @@ func report(who: Neighbour) -> void:
 	patrol_until = Clock.minutes + 180.0
 
 
+func agent_saw(who: Neighbour) -> void:
+	if blown:
+		return
+	blown = true
+	arrive_at = Clock.minutes + 10.0
+	Game.note("%s was watching. He is no salesman, and now the Bureau knows everything." % who.full_name())
+
+
+## Bodies lying where a neighbour can see them.
+func _bodies() -> void:
+	for b: Neighbour in main.neighbours:
+		if not b.is_out_cold() or b.found or b.carried or b.hidden_body:
+			continue
+		for n: Neighbour in main.neighbours:
+			if n == b or not n.is_awake() or n.asset or n.global_position.distance_to(b.global_position) > 14.0:
+				continue
+			if n.can_see(b.global_position, Game.ctx.get("light", 1.0), true):
+				b.found = true
+				if b.state == "dead":
+					Game.incident_add(35.0, "%s has found %s dead. The street will never be the same." % [n.full_name(), b.full_name()])
+					investigating = true
+				n.alarm("found %s lying there" % b.full_name())
+				break
+
+
 ## Called at 4 AM: decide whether the Bureau takes an interest today.
 func daily() -> void:
+	for n: Neighbour in main.neighbours:
+		if n.state == "dead" and not n.found and not n.missing_reported and Clock.minutes - n.died_at > 20.0 * 60.0:
+			n.missing_reported = true
+			investigating = true
+			Game.incident_add(22.0, "%s has been reported missing. The Bureau is asking questions." % n.full_name())
+			if n.d.agent:
+				search_at = Clock.minutes + Clock.until(8.0)
+				Game.note("The missing man was one of theirs. They will tear the street apart.")
 	if Game.heat >= Rules.HEAT_SEARCH and search_at < 0.0 and Clock.minutes >= no_search_until:
 		search_at = Clock.minutes + Clock.until(8.0) + _rng.randf_range(0.0, 120.0)
 		investigating = true
@@ -124,6 +157,7 @@ func _process(delta: float) -> void:
 			_search(false)
 	_officers()
 	_investigator()
+	_bodies()
 
 
 func _send_officers() -> void:
@@ -231,6 +265,11 @@ func contraband(at_home: bool) -> Array:
 				items.append({"name": it.name, "place": place})
 	if not Game.radio_hidden:
 		items.append({"name": "Shortwave set", "place": "open"})
+	for it: Dictionary in main.life.trunk.items:
+		if it.contraband:
+			items.append({"name": it.name + " (in the car)", "place": "open"})
+	if main.life.body_in_trunk:
+		items.append({"name": "a body in the trunk of your car", "place": "open"})
 	return items
 
 

@@ -177,6 +177,12 @@ func contains(world: Vector3) -> bool:
 	return _inside_local(to_local(world))
 
 
+## True if `world` is over the house's footprint grown by `margin` metres.
+func footprint(world: Vector3, margin: float) -> bool:
+	var p := to_local(world)
+	return p.x > -margin and p.x < tpl.w + margin and p.z > -margin and p.z < tpl.d + margin
+
+
 func room_at(world: Vector3) -> String:
 	var p := to_local(world)
 	for r: Array in tpl.rooms:

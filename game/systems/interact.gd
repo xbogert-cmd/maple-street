@@ -85,6 +85,7 @@ func _build() -> Array[Dictionary]:
 		found.append([0.0, _opt("Put %s down" % body.d.first, func() -> void: _put_down())])
 		if pos.distance_to(POND) < 8.0:
 			found.append([0.1, _opt("Sink the body in the pond", func() -> void: _sink(), 6.0, "carry_body")])
+		main.life.body_options(found, pos)
 		return _keys(found)
 	# people
 	for n: Neighbour in main.neighbours:
